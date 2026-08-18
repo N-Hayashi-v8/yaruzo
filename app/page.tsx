@@ -1,69 +1,187 @@
-import Image from "next/image";
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { load, newTask, save } from "@/lib/store";
+import { nextTask } from "@/lib/select";
+import type { Store } from "@/lib/types";
+
+const mmss = (sec: number) =>
+  `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
+
+const isThisMonth = (ts: number) => {
+  const d = new Date(ts);
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+};
 
 export default function Home() {
+  const [store, setStore] = useState<Store | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [remaining, setRemaining] = useState(0);
+  /** 実行中の終了時刻(ms)。null = 停止中。経過は実時刻から引く（タブ非表示で setInterval が絞られてもズレない） */
+  const [endAt, setEndAt] = useState<number | null>(null);
+  const running = endAt !== null;
+
+  // localStorage は client でしか読めない。lazy init だと hydration が食い違うので mount 後に読む
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setStore(load()), []);
+
+  const task = store ? nextTask(store.tasks) : null;
+  const taskId = task?.id ?? null;
+  const estimateMin = task?.estimateMin ?? 0;
+
+  // タスクが変わったらタイマーを積み直す（render 中の state 調整。effect にすると 1 フレーム古い値が出る）
+  const [shownTaskId, setShownTaskId] = useState(taskId);
+  if (shownTaskId !== taskId) {
+    setShownTaskId(taskId);
+    setRemaining(estimateMin * 60);
+    setEndAt(null);
+  }
+
+  useEffect(() => {
+    if (endAt === null) return;
+    const id = setInterval(() => {
+      const left = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
+      setRemaining(left);
+      if (left === 0) setEndAt(null);
+    }, 250);
+    return () => clearInterval(id);
+  }, [endAt]);
+
+  const toggle = useCallback(() => {
+    if (!taskId) return;
+    if (endAt === null) {
+      setEndAt(Date.now() + remaining * 1000);
+    } else {
+      setRemaining(Math.max(0, Math.ceil((endAt - Date.now()) / 1000)));
+      setEndAt(null);
+    }
+  }, [taskId, endAt, remaining]);
+
+  const update = useCallback(
+    (fn: (s: Store) => Store) => {
+      if (!store) return;
+      const next = fn(store);
+      save(next);
+      setStore(next);
+    },
+    [store],
+  );
+
+  const complete = useCallback(() => {
+    if (!taskId) return;
+    update((s) => ({
+      ...s,
+      tasks: s.tasks.map((t) =>
+        t.id === taskId ? { ...t, completedAt: Date.now() } : t,
+      ),
+    }));
+  }, [taskId, update]);
+
+  const add = useCallback(() => {
+    const title = draft.trim();
+    if (!title) return;
+    update((s) => ({ ...s, tasks: [...s.tasks, newTask(title)] }));
+    setDraft("");
+    setAdding(false);
+  }, [draft, update]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (adding) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      // 入力欄で押されたキーは奪わない。
+      // 追加確定の Enter は setAdding(false) を挟んでから window まで伝播しきるので、
+      // adding フラグだけでは間に合わず「追加した直後に完了」してしまう。
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.isComposing) return; // IME 変換確定の Enter を拾わない
+      if (e.key === " ") {
+        e.preventDefault();
+        toggle();
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        complete();
+      } else if (e.key.toLowerCase() === "n") {
+        e.preventDefault();
+        setAdding(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [adding, toggle, complete]);
+
+  if (!store) return null;
+
+  const monthCount = store.tasks.filter(
+    (t) => t.completedAt !== null && isThisMonth(t.completedAt),
+  ).length;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <>
+      <main className="flex-1 flex flex-col items-center justify-center gap-10 p-8">
+        {task ? (
+          <>
+            <h1 className="max-w-3xl text-center text-4xl font-bold leading-snug sm:text-6xl">
+              {task.title}
+            </h1>
+            <div
+              className={`font-mono text-7xl tabular-nums transition-opacity ${
+                running ? "opacity-100" : "opacity-40"
+              }`}
+              aria-label={`残り ${mmss(remaining)}`}
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+              {mmss(remaining)}
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={toggle}
+                className="rounded-full border border-current/30 px-6 py-2 text-sm"
+              >
+                {running ? "一時停止" : "開始"}
+              </button>
+              <button
+                onClick={complete}
+                className="rounded-full bg-foreground px-6 py-2 text-sm text-background"
+              >
+                完了
+              </button>
+            </div>
+          </>
+        ) : (
+          <p className="text-2xl opacity-60">やること なし</p>
+        )}
+
+        <button
+          onClick={() => setAdding(true)}
+          className="text-sm opacity-50 underline underline-offset-4"
+        >
+          ＋ 追加
+        </button>
+        <p className="text-xs opacity-40">Space 開始／停止・Enter 完了・N 追加</p>
       </main>
-    </div>
+
+      <footer className="p-4 text-center text-sm opacity-40">今月 {monthCount}</footer>
+
+      {adding && (
+        <div
+          className="fixed inset-0 flex items-start justify-center bg-black/60 p-8 pt-32"
+          onClick={() => setAdding(false)}
+        >
+          <input
+            autoFocus
+            value={draft}
+            placeholder="やること"
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") add();
+              if (e.key === "Escape") setAdding(false);
+            }}
+            className="w-full max-w-xl rounded-lg bg-background px-5 py-4 text-xl outline-none"
+          />
+        </div>
+      )}
+    </>
   );
 }
