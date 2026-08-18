@@ -16,14 +16,26 @@ Windows / macOS / Linux どれでも可。OS 依存コードなし。
 
 ## 2. セットアップ
 
+リポジトリ: <https://github.com/N-Hayashi-v8/tsugi>（private）
+
 ```
-git clone <リポジトリ URL>
-cd task
+gh repo clone N-Hayashi-v8/tsugi
+cd tsugi
 npm install
 npm run dev
 ```
 
 → `http://localhost:3000`
+
+`gh` が無い環境なら:
+
+```
+git clone https://github.com/N-Hayashi-v8/tsugi.git
+```
+
+private のため認証が要る。`gh auth login`（HTTPS / Authenticate Git with your GitHub credentials は Yes）を
+先に通しておくのが早い。Windows で `gh` が PATH に出てこない場合はフルパスで叩く:
+`& "C:\Program Files\GitHub CLI\gh.exe" auth login`
 
 ## 3. 動作確認
 
@@ -75,16 +87,12 @@ P2（タスク分解 = LLM 呼び出し）に入ったら API キーを置く。
 
 ## 5. リポジトリの現状
 
-- コミット: `Initial commit from Create Next App` 1 本のみ
-- **リモート未設定**。P1 の実装は全部ローカル未コミット
-- → 引き継ぎ前に コミット + リモート push が必須
+- リモート: `origin` = <https://github.com/N-Hayashi-v8/tsugi>（private）
+- 既定ブランチ: `main`
+- P1 までコミット済み・push 済み
 
-```
-git add -A
-git commit -m "..."
-git remote add origin <URL>
-git push -u origin main
-```
+旧リポジトリ名 `ter` からリネーム済み。旧 URL は GitHub がリダイレクトするが、
+新しく書くときは `tsugi` を使う。
 
 ## 6. 読む順番
 
