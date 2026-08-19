@@ -1,0 +1,2 @@
+# bat は CRLF でないと cmd が複数行ブロックを壊す
+*.bat text eol=crlf
