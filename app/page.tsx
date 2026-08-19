@@ -35,6 +35,31 @@ const CHEERS = ["よし", "済", "片付いた", "いいぞ", "1個 減った", 
 
 type OverlayName = "add" | "split" | "sleepy" | "today";
 
+/** フッターのキーヒント。押せる（タッチだけの端末でも操作できる） */
+function HintButton({
+  keyLabel,
+  label,
+  onClick,
+  disabled = false,
+}: {
+  keyLabel: string;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      aria-keyshortcuts={keyLabel.toLowerCase()}
+      className="flex min-h-11 items-center gap-1.5 px-2 whitespace-nowrap hover:bg-background hover:text-foreground active:bg-accent active:text-on-accent disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-current"
+    >
+      <span className="border-2 border-current px-1.5 py-0.5 text-[11px]">{keyLabel}</span>
+      <span>{label}</span>
+    </button>
+  );
+}
+
 export default function Home() {
   const [store, setStore] = useState<Store | null>(null);
   const [overlay, setOverlay] = useState<OverlayName | null>(null);
@@ -308,15 +333,21 @@ export default function Home() {
         )}
       </main>
 
-      <footer className="flex h-[54px] flex-shrink-0 items-center gap-5 overflow-x-auto bg-foreground px-6 font-mono text-[13px] font-bold tracking-[0.06em] text-background">
-        <span>SPACE 開始/停止</span>
-        <span>ENTER 完了</span>
-        <span>N 追加</span>
-        <span>D 分解</span>
-        <span>S 眠い</span>
-        <span>T 今日</span>
+      {/* キーが押せない環境（スマホ）でも同じ操作ができるよう、ヒントはそのままボタン */}
+      <footer className="flex min-h-[54px] flex-shrink-0 items-center gap-1 overflow-x-auto bg-foreground px-3 font-mono text-[13px] font-bold tracking-[0.06em] text-background sm:gap-2 sm:px-5">
+        <HintButton keyLabel="SPACE" label="開始/停止" onClick={toggle} disabled={!task} />
+        <HintButton keyLabel="ENTER" label="完了" onClick={complete} disabled={!task} />
+        <HintButton keyLabel="N" label="追加" onClick={() => setOverlay("add")} />
+        <HintButton
+          keyLabel="D"
+          label="分解"
+          onClick={() => setOverlay("split")}
+          disabled={!stored || body !== null}
+        />
+        <HintButton keyLabel="S" label="眠い" onClick={() => setOverlay("sleepy")} />
+        <HintButton keyLabel="T" label="今日" onClick={() => setOverlay("today")} />
         <span className="flex-1" />
-        <span className="hidden opacity-60 sm:inline">リストは出さない</span>
+        <span className="hidden opacity-60 lg:inline">リストは出さない</span>
       </footer>
 
       {overlay === "add" && (
