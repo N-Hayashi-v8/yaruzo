@@ -1,4 +1,4 @@
-import type { Store, Task } from "./types";
+import type { DayLog, Store, Task } from "./types";
 
 const KEY = "task-app-v1";
 const EMPTY: Store = { tasks: [], logs: [] };
@@ -32,4 +32,21 @@ export function newTask(title: string): Task {
     createdAt: Date.now(),
     completedAt: null,
   };
+}
+
+/** ローカル日付の YYYY-MM-DD。UTC 変換を挟むと日付がずれるので getFullYear 系で組む */
+export function todayKey(d: Date = new Date()): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/** その日の記録。無ければ空の記録を返す（作成はしない） */
+export function logFor(store: Store, date: string): DayLog {
+  return store.logs.find((l) => l.date === date) ?? { date, wakeAt: null, gotLight: false };
+}
+
+/** その日の記録を差し替えた新しい Store を返す */
+export function putLog(store: Store, log: DayLog): Store {
+  const rest = store.logs.filter((l) => l.date !== log.date);
+  return { ...store, logs: [...rest, log] };
 }

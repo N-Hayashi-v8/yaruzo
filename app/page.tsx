@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { load, newTask, save } from "@/lib/store";
-import { nextTask } from "@/lib/select";
+import { load, logFor, newTask, putLog, save, todayKey } from "@/lib/store";
+import { hasStimulating, nextTask, taskQueue } from "@/lib/select";
 import type { Store } from "@/lib/types";
+import { AddOverlay, SleepyOverlay, TodayOverlay, type BodyTask } from "./overlays";
 
 const mmss = (sec: number) =>
   `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
@@ -14,20 +15,31 @@ const isThisMonth = (ts: number) => {
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
 };
 
+/** 完了時の一言。毎回同じだと 2 日で効かなくなる（DESIGN.md 4章: 新規性減衰） */
+const CHEERS = ["よし", "済", "片付いた", "いいぞ", "1個 減った", "続けろ"];
+
+type OverlayName = "add" | "sleepy" | "today";
+
 export default function Home() {
   const [store, setStore] = useState<Store | null>(null);
-  const [adding, setAdding] = useState(false);
+  const [overlay, setOverlay] = useState<OverlayName | null>(null);
   const [draft, setDraft] = useState("");
   const [remaining, setRemaining] = useState(0);
   /** 実行中の終了時刻(ms)。null = 停止中。経過は実時刻から引く（タブ非表示で setInterval が絞られてもズレない） */
   const [endAt, setEndAt] = useState<number | null>(null);
+  /** ponytail: 眠気モードはセッション限り。リロードで戻る。日をまたいで保つなら DayLog に足す */
+  const [sleepy, setSleepy] = useState(false);
+  /** 身体タスクは永続化しない。覚醒を戻すためだけの一時タスク */
+  const [body, setBody] = useState<BodyTask | null>(null);
+  const [cheer, setCheer] = useState<string | null>(null);
   const running = endAt !== null;
 
   // localStorage は client でしか読めない。lazy init だと hydration が食い違うので mount 後に読む
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setStore(load()), []);
 
-  const task = store ? nextTask(store.tasks) : null;
+  const stored = store ? nextTask(store.tasks, sleepy) : null;
+  const task = body ?? stored;
   const taskId = task?.id ?? null;
   const estimateMin = task?.estimateMin ?? 0;
 
@@ -48,6 +60,12 @@ export default function Home() {
     }, 250);
     return () => clearInterval(id);
   }, [endAt]);
+
+  useEffect(() => {
+    if (cheer === null) return;
+    const id = setTimeout(() => setCheer(null), 1600);
+    return () => clearTimeout(id);
+  }, [cheer]);
 
   const toggle = useCallback(() => {
     if (!taskId) return;
@@ -74,29 +92,37 @@ export default function Home() {
 
   const complete = useCallback(() => {
     if (!taskId) return;
+    setCheer(CHEERS[Math.floor(Math.random() * CHEERS.length)]);
+    if (body) {
+      setBody(null); // 身体タスクは記録に残さない
+      return;
+    }
     update((s) => ({
       ...s,
       tasks: s.tasks.map((t) =>
         t.id === taskId ? { ...t, completedAt: Date.now() } : t,
       ),
     }));
-  }, [taskId, update]);
+  }, [taskId, body, update]);
 
   const add = useCallback(() => {
     const title = draft.trim();
     if (!title) return;
     update((s) => ({ ...s, tasks: [...s.tasks, newTask(title)] }));
     setDraft("");
-    setAdding(false);
+    setOverlay(null);
   }, [draft, update]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (adding) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (overlay !== null) {
+        if (e.key === "Escape") setOverlay(null);
+        return;
+      }
       // 入力欄で押されたキーは奪わない。
-      // 追加確定の Enter は setAdding(false) を挟んでから window まで伝播しきるので、
-      // adding フラグだけでは間に合わず「追加した直後に完了」してしまう。
+      // 追加確定の Enter は setOverlay(null) を挟んでから window まで伝播しきるので、
+      // overlay フラグだけでは間に合わず「追加した直後に完了」してしまう。
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.isComposing) return; // IME 変換確定の Enter を拾わない
       if (e.key === " ") {
@@ -107,18 +133,28 @@ export default function Home() {
         complete();
       } else if (e.key.toLowerCase() === "n") {
         e.preventDefault();
-        setAdding(true);
+        setOverlay("add");
+      } else if (e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        setOverlay("sleepy");
+      } else if (e.key.toLowerCase() === "t") {
+        e.preventDefault();
+        setOverlay("today");
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [adding, toggle, complete]);
+  }, [overlay, toggle, complete]);
 
   if (!store) return null;
 
-  const monthCount = store.tasks.filter(
-    (t) => t.completedAt !== null && isThisMonth(t.completedAt),
-  ).length;
+  const completed = store.tasks.filter((t) => t.completedAt !== null);
+  const monthCount = completed.filter((t) => isThisMonth(t.completedAt ?? 0)).length;
+  const today = todayKey();
+  const doneToday = completed
+    .filter((t) => todayKey(new Date(t.completedAt ?? 0)) === today)
+    .sort((a, b) => (a.completedAt ?? 0) - (b.completedAt ?? 0));
+  const log = logFor(store, today);
   const total = estimateMin * 60;
   const donePct = total > 0 ? Math.round((1 - remaining / total) * 100) : 0;
 
@@ -127,6 +163,11 @@ export default function Home() {
       <header className="flex h-[68px] flex-shrink-0 items-center gap-6 bg-foreground px-6 text-background">
         <span className="font-display text-[26px] tracking-[0.14em]">NOW</span>
         <span className="h-5 flex-1 bg-[repeating-linear-gradient(135deg,currentColor_0_6px,transparent_6px_14px)] opacity-55" />
+        {sleepy && (
+          <span className="border-2 border-current px-2 py-0.5 font-mono text-xs font-bold tracking-[0.1em]">
+            眠気モード
+          </span>
+        )}
         <span className="font-mono text-[17px] font-bold tracking-[0.06em]">
           今月 {monthCount}
         </span>
@@ -136,13 +177,19 @@ export default function Home() {
         {task ? (
           <>
             <div className="flex flex-wrap items-center gap-2.5">
-              <span
-                className={`border-[3px] border-current px-3 py-1 text-sm font-bold tracking-[0.08em] ${
-                  task.stimulation === 3 ? "bg-accent text-on-accent" : ""
-                }`}
-              >
-                刺激度 {task.stimulation}
-              </span>
+              {body ? (
+                <span className="border-[3px] border-current bg-accent px-3 py-1 text-sm font-bold tracking-[0.08em] text-on-accent">
+                  身体タスク
+                </span>
+              ) : (
+                <span
+                  className={`border-[3px] border-current px-3 py-1 text-sm font-bold tracking-[0.08em] ${
+                    stored?.stimulation === 3 ? "bg-accent text-on-accent" : ""
+                  }`}
+                >
+                  刺激度 {stored?.stimulation}
+                </span>
+              )}
               <span className="border-[3px] border-current px-3 py-1 text-sm font-bold tracking-[0.08em]">
                 見積 {task.estimateMin}分
               </span>
@@ -179,7 +226,7 @@ export default function Home() {
               <div className="bg-current" style={{ width: `${donePct}%` }} />
             </div>
 
-            <div className="flex flex-wrap gap-5">
+            <div className="flex flex-wrap items-center gap-5">
               <button
                 onClick={toggle}
                 className="flex min-h-14 items-center gap-3 border-4 border-current px-6 py-3 text-lg font-bold shadow-[8px_8px_0_currentColor]"
@@ -208,6 +255,11 @@ export default function Home() {
                   ENTER
                 </span>
               </button>
+              {cheer && (
+                <span className="rotate-3 bg-accent px-5 py-2.5 font-display text-2xl text-on-accent">
+                  {cheer}
+                </span>
+              )}
             </div>
           </>
         ) : (
@@ -220,7 +272,7 @@ export default function Home() {
               <span className="text-lg font-bold">やること なし。それでいい。</span>
             </div>
             <button
-              onClick={() => setAdding(true)}
+              onClick={() => setOverlay("add")}
               className="flex min-h-[68px] items-center gap-3.5 self-start border-[5px] border-foreground bg-accent px-7 py-3.5 text-2xl font-black text-on-accent shadow-[10px_10px_0_var(--color-foreground)] sm:text-3xl"
             >
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" aria-hidden>
@@ -233,69 +285,50 @@ export default function Home() {
         )}
       </main>
 
-      <footer className="flex h-[54px] flex-shrink-0 items-center gap-6 bg-foreground px-6 font-mono text-[13px] font-bold tracking-[0.06em] text-background">
+      <footer className="flex h-[54px] flex-shrink-0 items-center gap-5 overflow-x-auto bg-foreground px-6 font-mono text-[13px] font-bold tracking-[0.06em] text-background">
         <span>SPACE 開始/停止</span>
         <span>ENTER 完了</span>
         <span>N 追加</span>
+        <span>S 眠い</span>
+        <span>T 今日</span>
         <span className="flex-1" />
         <span className="hidden opacity-60 sm:inline">リストは出さない</span>
       </footer>
 
-      {adding && (
-        <div
-          className="fixed inset-0 flex items-start justify-center bg-[rgba(22,19,15,0.74)] p-6 pt-28"
-          onClick={() => setAdding(false)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="flex w-full max-w-4xl -rotate-[0.7deg] flex-col gap-5 border-[6px] border-foreground bg-background p-8 shadow-[16px_16px_0_var(--accent)]"
-          >
-            <div className="flex flex-wrap items-baseline gap-4">
-              <span className="font-display text-4xl">追加</span>
-              <span className="text-[15px] font-bold opacity-60">1行だけ。それ以上 聞かない。</span>
-              <span className="flex-1" />
-              <span className="border-[3px] border-current px-2 py-1 font-mono text-[13px] font-bold">
-                N
-              </span>
-            </div>
+      {overlay === "add" && (
+        <AddOverlay
+          draft={draft}
+          onDraft={setDraft}
+          onAdd={add}
+          onClose={() => setOverlay(null)}
+        />
+      )}
 
-            <input
-              autoFocus
-              value={draft}
-              placeholder="やること"
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") add();
-                if (e.key === "Escape") setAdding(false);
-              }}
-              className="w-full border-[5px] border-foreground bg-background px-5 py-4 text-2xl font-bold outline-none placeholder:text-current placeholder:opacity-35 sm:text-4xl"
-            />
+      {overlay === "sleepy" && (
+        <SleepyOverlay
+          sleepy={sleepy}
+          onToggle={() => setSleepy((v) => !v)}
+          hasStim={hasStimulating(store.tasks)}
+          queue={taskQueue(store.tasks, sleepy).slice(0, 3)}
+          onPickBody={(b) => {
+            setBody(b);
+            setOverlay(null);
+          }}
+          onClose={() => setOverlay(null)}
+        />
+      )}
 
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="border-[3px] border-current px-3.5 py-1.5 text-[15px] font-bold">
-                見積 15分
-              </span>
-              <span className="border-[3px] border-current px-3.5 py-1.5 text-[15px] font-bold">
-                刺激度 2
-              </span>
-              <span className="text-[15px] font-bold opacity-60">← 初期値。あとで変えられる</span>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-4 border-t-4 border-foreground pt-5">
-              <button
-                onClick={add}
-                className="flex min-h-14 items-center gap-3 border-4 border-foreground bg-accent px-6 py-3 text-lg font-bold text-on-accent shadow-[8px_8px_0_var(--color-foreground)]"
-              >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <path d="M4 12h14M13 6l6 6-6 6" />
-                </svg>
-                入れる
-                <span className="border-2 border-current px-1.5 py-0.5 font-mono text-xs">ENTER</span>
-              </button>
-              <span className="font-mono text-[13px] font-bold opacity-60">ESC 閉じる</span>
-            </div>
-          </div>
-        </div>
+      {overlay === "today" && (
+        <TodayOverlay
+          done={doneToday}
+          wakeAt={log.wakeAt ?? ""}
+          onWake={(v) => update((s) => putLog(s, { ...log, wakeAt: v || null }))}
+          gotLight={log.gotLight}
+          onToggleLight={() => update((s) => putLog(s, { ...log, gotLight: !log.gotLight }))}
+          monthCount={monthCount}
+          totalCount={completed.length}
+          onClose={() => setOverlay(null)}
+        />
       )}
     </>
   );

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { nextTask } from "./select.ts";
+import { hasStimulating, nextTask, taskQueue } from "./select.ts";
 import type { Task } from "./types.ts";
 
 const task = (over: Partial<Task> & { id: string; createdAt: number }): Task => ({
@@ -41,4 +41,50 @@ test("入力配列を破壊しない", () => {
   const tasks = [task({ id: "b", createdAt: 20 }), task({ id: "a", createdAt: 10 })];
   nextTask(tasks);
   assert.deepEqual(tasks.map((t) => t.id), ["b", "a"]);
+});
+
+test("眠気モードは刺激度の高い順", () => {
+  const tasks = [
+    task({ id: "boring", createdAt: 10, stimulation: 1 }),
+    task({ id: "fun", createdAt: 30, stimulation: 3 }),
+    task({ id: "mid", createdAt: 20, stimulation: 2 }),
+  ];
+  assert.equal(nextTask(tasks, true)?.id, "fun");
+  assert.equal(nextTask(tasks)?.id, "boring"); // 通常は古い順のまま
+});
+
+test("眠気モードでも同じ刺激度なら古い順", () => {
+  const tasks = [
+    task({ id: "new", createdAt: 30, stimulation: 3 }),
+    task({ id: "old", createdAt: 10, stimulation: 3 }),
+  ];
+  assert.equal(nextTask(tasks, true)?.id, "old");
+});
+
+test("眠気モードでも入力配列を破壊しない", () => {
+  const tasks = [
+    task({ id: "boring", createdAt: 10, stimulation: 1 }),
+    task({ id: "fun", createdAt: 30, stimulation: 3 }),
+  ];
+  nextTask(tasks, true);
+  assert.deepEqual(tasks.map((t) => t.id), ["boring", "fun"]);
+});
+
+test("taskQueue は完了済みと親を外して並べる", () => {
+  const tasks = [
+    task({ id: "done", createdAt: 5, completedAt: 99 }),
+    task({ id: "parent", createdAt: 10 }),
+    task({ id: "child", createdAt: 20, parentId: "parent" }),
+  ];
+  assert.deepEqual(taskQueue(tasks).map((t) => t.id), ["child"]);
+});
+
+test("刺激度 3 の在庫判定", () => {
+  assert.equal(hasStimulating([task({ id: "a", createdAt: 10, stimulation: 2 })]), false);
+  assert.equal(hasStimulating([task({ id: "a", createdAt: 10, stimulation: 3 })]), true);
+  // 完了済みの刺激度 3 は在庫に数えない
+  assert.equal(
+    hasStimulating([task({ id: "a", createdAt: 10, stimulation: 3, completedAt: 1 })]),
+    false,
+  );
 });

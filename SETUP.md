@@ -93,7 +93,7 @@ P2（タスク分解 = LLM 呼び出し）に入ったら API キーを置く。
 
 - リモート: `origin` = <https://github.com/N-Hayashi-v8/tsugi>（private）
 - 既定ブランチ: `main`
-- P1 + UI（ブルータリスト方向）までコミット済み・push 済み
+- P1 / P3 / P4 + UI（ブルータリスト方向）までコミット済み・push 済み。P2 のみ未着手
 
 旧リポジトリ名 `ter` からリネーム済み。旧 URL は GitHub がリダイレクトするが、
 新しく書くときは `tsugi` を使う。
