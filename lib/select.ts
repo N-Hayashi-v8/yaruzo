@@ -31,3 +31,14 @@ export function nextTask(tasks: Task[], sleepy = false): Task | null {
 export function hasStimulating(tasks: Task[]): boolean {
   return candidates(tasks).some((t) => t.stimulation === 3);
 }
+
+/**
+ * 完了済みのうち、子を持たないもの。
+ * 分解の親は子と二重に数えないため、カウントと今日の一覧はこれを使う。
+ */
+export function completedLeaves(tasks: Task[]): Task[] {
+  const parentIds = new Set(
+    tasks.map((t) => t.parentId).filter((id): id is string => id !== null),
+  );
+  return tasks.filter((t) => t.completedAt !== null && !parentIds.has(t.id));
+}

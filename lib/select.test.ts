@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { hasStimulating, nextTask, taskQueue } from "./select.ts";
+import { completedLeaves, hasStimulating, nextTask, taskQueue } from "./select.ts";
 import type { Task } from "./types.ts";
 
 const task = (over: Partial<Task> & { id: string; createdAt: number }): Task => ({
@@ -87,4 +87,14 @@ test("刺激度 3 の在庫判定", () => {
     hasStimulating([task({ id: "a", createdAt: 10, stimulation: 3, completedAt: 1 })]),
     false,
   );
+});
+
+test("completedLeaves は分解の親を数えない", () => {
+  const tasks = [
+    task({ id: "p", createdAt: 10, completedAt: 200 }),
+    task({ id: "c1", createdAt: 20, parentId: "p", completedAt: 100 }),
+    task({ id: "c2", createdAt: 30, parentId: "p", completedAt: 200 }),
+    task({ id: "solo", createdAt: 40, completedAt: 300 }),
+  ];
+  assert.deepEqual(completedLeaves(tasks).map((t) => t.id), ["c1", "c2", "solo"]);
 });

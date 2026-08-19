@@ -1,10 +1,25 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { load, logFor, newTask, putLog, save, todayKey } from "@/lib/store";
-import { hasStimulating, nextTask, taskQueue } from "@/lib/select";
+import {
+  completeTask,
+  load,
+  logFor,
+  newTask,
+  putLog,
+  save,
+  splitTask,
+  todayKey,
+} from "@/lib/store";
+import { completedLeaves, hasStimulating, nextTask, taskQueue } from "@/lib/select";
 import type { Store } from "@/lib/types";
-import { AddOverlay, SleepyOverlay, TodayOverlay, type BodyTask } from "./overlays";
+import {
+  AddOverlay,
+  SleepyOverlay,
+  SplitOverlay,
+  TodayOverlay,
+  type BodyTask,
+} from "./overlays";
 
 const mmss = (sec: number) =>
   `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
@@ -18,12 +33,13 @@ const isThisMonth = (ts: number) => {
 /** 完了時の一言。毎回同じだと 2 日で効かなくなる（DESIGN.md 4章: 新規性減衰） */
 const CHEERS = ["よし", "済", "片付いた", "いいぞ", "1個 減った", "続けろ"];
 
-type OverlayName = "add" | "sleepy" | "today";
+type OverlayName = "add" | "split" | "sleepy" | "today";
 
 export default function Home() {
   const [store, setStore] = useState<Store | null>(null);
   const [overlay, setOverlay] = useState<OverlayName | null>(null);
   const [draft, setDraft] = useState("");
+  const [steps, setSteps] = useState(["", "", ""]);
   const [remaining, setRemaining] = useState(0);
   /** 実行中の終了時刻(ms)。null = 停止中。経過は実時刻から引く（タブ非表示で setInterval が絞られてもズレない） */
   const [endAt, setEndAt] = useState<number | null>(null);
@@ -97,12 +113,7 @@ export default function Home() {
       setBody(null); // 身体タスクは記録に残さない
       return;
     }
-    update((s) => ({
-      ...s,
-      tasks: s.tasks.map((t) =>
-        t.id === taskId ? { ...t, completedAt: Date.now() } : t,
-      ),
-    }));
+    update((s) => completeTask(s, taskId));
   }, [taskId, body, update]);
 
   const add = useCallback(() => {
@@ -112,6 +123,14 @@ export default function Home() {
     setDraft("");
     setOverlay(null);
   }, [draft, update]);
+
+  const split = useCallback(() => {
+    if (!taskId || body) return;
+    if (steps.every((t) => t.trim() === "")) return;
+    update((s) => splitTask(s, taskId, steps));
+    setSteps(["", "", ""]);
+    setOverlay(null);
+  }, [taskId, body, steps, update]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -134,6 +153,9 @@ export default function Home() {
       } else if (e.key.toLowerCase() === "n") {
         e.preventDefault();
         setOverlay("add");
+      } else if (e.key.toLowerCase() === "d") {
+        e.preventDefault();
+        if (!body) setOverlay("split"); // 身体タスクは分解しない
       } else if (e.key.toLowerCase() === "s") {
         e.preventDefault();
         setOverlay("sleepy");
@@ -144,11 +166,12 @@ export default function Home() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [overlay, toggle, complete]);
+  }, [overlay, body, toggle, complete]);
 
   if (!store) return null;
 
-  const completed = store.tasks.filter((t) => t.completedAt !== null);
+  // 分解の親は子と二重に数えない
+  const completed = completedLeaves(store.tasks);
   const monthCount = completed.filter((t) => isThisMonth(t.completedAt ?? 0)).length;
   const today = todayKey();
   const doneToday = completed
@@ -289,6 +312,7 @@ export default function Home() {
         <span>SPACE 開始/停止</span>
         <span>ENTER 完了</span>
         <span>N 追加</span>
+        <span>D 分解</span>
         <span>S 眠い</span>
         <span>T 今日</span>
         <span className="flex-1" />
@@ -300,6 +324,16 @@ export default function Home() {
           draft={draft}
           onDraft={setDraft}
           onAdd={add}
+          onClose={() => setOverlay(null)}
+        />
+      )}
+
+      {overlay === "split" && stored && (
+        <SplitOverlay
+          title={stored.title}
+          steps={steps}
+          onStep={(i, v) => setSteps((prev) => prev.map((s, j) => (j === i ? v : s)))}
+          onSplit={split}
           onClose={() => setOverlay(null)}
         />
       )}

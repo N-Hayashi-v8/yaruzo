@@ -92,6 +92,80 @@ export function AddOverlay({
   );
 }
 
+/** 埋める順に効く問い。数も順も固定（選ばせない = 摩擦を作らない） */
+const SPLIT_PROMPTS = [
+  "最初の5分で できることは？",
+  "次は？",
+  "終わりの目印は？",
+];
+
+export function SplitOverlay({
+  title,
+  steps,
+  onStep,
+  onSplit,
+  onClose,
+}: {
+  title: string;
+  steps: string[];
+  onStep: (i: number, v: string) => void;
+  onSplit: () => void;
+  onClose: () => void;
+}) {
+  const filled = steps.some((s) => s.trim() !== "");
+  return (
+    <Overlay onClose={onClose}>
+      <Head title="分解" note="3つ 固定。数は選ばせない" hint="D" />
+
+      <div className="flex flex-wrap items-center gap-4 border-4 border-foreground bg-foreground px-5 py-3.5 text-background">
+        <span className="font-mono text-xs font-bold tracking-[0.12em] opacity-70">いま これ</span>
+        <span className="font-display text-2xl sm:text-3xl">{title}</span>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        {SPLIT_PROMPTS.map((prompt, i) => (
+          <div
+            key={prompt}
+            className="flex items-stretch border-4 border-foreground shadow-[7px_7px_0_var(--color-foreground)]"
+          >
+            <span className="flex w-14 flex-shrink-0 items-center justify-center border-r-4 border-foreground bg-accent font-display text-2xl text-on-accent sm:w-16">
+              {i + 1}
+            </span>
+            <input
+              autoFocus={i === 0}
+              value={steps[i]}
+              placeholder={prompt}
+              onChange={(e) => onStep(i, e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.nativeEvent.isComposing) onSplit();
+                if (e.key === "Escape") onClose();
+              }}
+              className="w-full min-w-0 flex-1 bg-background px-4 py-3.5 text-lg font-bold outline-none placeholder:text-current placeholder:opacity-35 sm:text-xl"
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-4 border-t-4 border-foreground pt-5">
+        <button
+          onClick={onSplit}
+          disabled={!filled}
+          className="flex min-h-14 items-center gap-3 border-4 border-foreground bg-accent px-6 py-3 text-lg font-bold text-on-accent shadow-[8px_8px_0_var(--color-foreground)] disabled:opacity-40 disabled:shadow-none"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M12 3v6M12 9L5 15v6M12 9l7 6v6" />
+          </svg>
+          割る
+          <span className="border-2 border-current px-1.5 py-0.5 font-mono text-xs">ENTER</span>
+        </button>
+        <span className="text-sm font-bold opacity-60">
+          埋めた分だけ 子になる。1個でもいい。親は 子が全部済んだら 自動で完了
+        </span>
+      </div>
+    </Overlay>
+  );
+}
+
 export function SleepyOverlay({
   sleepy,
   onToggle,

@@ -86,14 +86,14 @@ localStorage.setItem('task-app-v1', `ここに貼る`); location.reload();
 
 ### 4-2. `.env*`
 
-`.gitignore` 対象。**現時点では存在しない**（P1 は外部サービスを一切使わない）。
-P2（タスク分解 = LLM 呼び出し）に入ったら API キーを置く。その時点でここに変数名を追記する。
+`.gitignore` 対象。**存在しないし、今後も要らない**。
+外部サービスを一切使わない設計に決まった（LLM 分解は不採用。DESIGN.md 3章 分解）。
 
 ## 5. リポジトリの現状
 
 - リモート: `origin` = <https://github.com/N-Hayashi-v8/tsugi>（private）
 - 既定ブランチ: `main`
-- P1 / P3 / P4 + UI（ブルータリスト方向）までコミット済み・push 済み。P2 のみ未着手
+- P1〜P4 + UI（ブルータリスト方向）までコミット済み・push 済み
 
 旧リポジトリ名 `ter` からリネーム済み。旧 URL は GitHub がリダイレクトするが、
 新しく書くときは `tsugi` を使う。
