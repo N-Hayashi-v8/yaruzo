@@ -27,6 +27,10 @@ npm run dev
 
 → `http://localhost:3000`
 
+Windows なら 2 回目以降は **`dev.bat` をダブルクリック**でいい。
+`node_modules` が無ければ `npm install` を先に流し、開発サーバを起動して
+数秒後にブラウザで `http://localhost:3000` を開く。止めるのはその窓で `Ctrl+C`。
+
 `gh` が無い環境なら:
 
 ```
@@ -89,7 +93,7 @@ P2（タスク分解 = LLM 呼び出し）に入ったら API キーを置く。
 
 - リモート: `origin` = <https://github.com/N-Hayashi-v8/tsugi>（private）
 - 既定ブランチ: `main`
-- P1 までコミット済み・push 済み
+- P1 + UI（ブルータリスト方向）までコミット済み・push 済み
 
 旧リポジトリ名 `ter` からリネーム済み。旧 URL は GitHub がリダイレクトするが、
 新しく書くときは `tsugi` を使う。
@@ -99,6 +103,6 @@ P2（タスク分解 = LLM 呼び出し）に入ったら API キーを置く。
 1. `CLAUDE.md` — 前提と禁止事項。曲げるな
 2. `DESIGN.md` — 全画面仕様、フェーズ、作らないものリスト
 3. `lib/types.ts` — データ形状
-4. `app/page.tsx` — UI 全部
+4. `app/page.tsx` — UI 全部（配色・フォントのトークンは `app/globals.css`）
 
 `AGENTS.md` は Next.js が自動生成・自動再追記するファイル。手で消しても `next dev` が戻す。
