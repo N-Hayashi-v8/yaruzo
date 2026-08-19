@@ -137,7 +137,7 @@ export default function Home() {
           <>
             <div className="flex flex-wrap items-center gap-2.5">
               <span
-                className={`border-[3px] border-current px-3 py-1 text-sm font-black tracking-[0.08em] ${
+                className={`border-[3px] border-current px-3 py-1 text-sm font-bold tracking-[0.08em] ${
                   task.stimulation === 3 ? "bg-accent text-on-accent" : ""
                 }`}
               >
@@ -168,7 +168,7 @@ export default function Home() {
                 </div>
               </div>
               <div
-                className="pb-4 text-[15px] font-black tracking-[0.18em]"
+                className="pb-4 text-[15px] font-bold tracking-[0.18em]"
                 style={{ writingMode: "vertical-rl" }}
               >
                 {running ? "実行中" : remaining === 0 ? "時間切れ" : "停止中"}
@@ -182,7 +182,7 @@ export default function Home() {
             <div className="flex flex-wrap gap-5">
               <button
                 onClick={toggle}
-                className="flex min-h-14 items-center gap-3 border-4 border-current px-6 py-3 text-lg font-black shadow-[8px_8px_0_currentColor]"
+                className="flex min-h-14 items-center gap-3 border-4 border-current px-6 py-3 text-lg font-bold shadow-[8px_8px_0_currentColor]"
               >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" aria-hidden>
                   {running ? (
@@ -198,7 +198,7 @@ export default function Home() {
               </button>
               <button
                 onClick={complete}
-                className="flex min-h-14 items-center gap-3 border-4 border-foreground bg-foreground px-6 py-3 text-lg font-black text-background shadow-[8px_8px_0_var(--accent)]"
+                className="flex min-h-14 items-center gap-3 border-4 border-foreground bg-foreground px-6 py-3 text-lg font-bold text-background shadow-[8px_8px_0_var(--accent)]"
               >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                   <path d="M4 13l6 6L21 5" />
@@ -221,7 +221,7 @@ export default function Home() {
             </div>
             <button
               onClick={() => setAdding(true)}
-              className="flex min-h-[68px] items-center gap-3.5 self-start border-[5px] border-foreground bg-accent px-7 py-3.5 font-display text-2xl text-on-accent shadow-[10px_10px_0_var(--color-foreground)] sm:text-3xl"
+              className="flex min-h-[68px] items-center gap-3.5 self-start border-[5px] border-foreground bg-accent px-7 py-3.5 text-2xl font-black text-on-accent shadow-[10px_10px_0_var(--color-foreground)] sm:text-3xl"
             >
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" aria-hidden>
                 <path d="M12 5v14M5 12h14" />
@@ -268,14 +268,14 @@ export default function Home() {
                 if (e.key === "Enter") add();
                 if (e.key === "Escape") setAdding(false);
               }}
-              className="w-full border-[5px] border-foreground bg-background px-5 py-4 text-2xl font-black outline-none placeholder:text-current placeholder:opacity-35 sm:text-4xl"
+              className="w-full border-[5px] border-foreground bg-background px-5 py-4 text-2xl font-bold outline-none placeholder:text-current placeholder:opacity-35 sm:text-4xl"
             />
 
             <div className="flex flex-wrap items-center gap-3">
-              <span className="border-[3px] border-current px-3.5 py-1.5 text-[15px] font-black">
+              <span className="border-[3px] border-current px-3.5 py-1.5 text-[15px] font-bold">
                 見積 15分
               </span>
-              <span className="border-[3px] border-current px-3.5 py-1.5 text-[15px] font-black">
+              <span className="border-[3px] border-current px-3.5 py-1.5 text-[15px] font-bold">
                 刺激度 2
               </span>
               <span className="text-[15px] font-bold opacity-60">← 初期値。あとで変えられる</span>
@@ -284,7 +284,7 @@ export default function Home() {
             <div className="flex flex-wrap items-center gap-4 border-t-4 border-foreground pt-5">
               <button
                 onClick={add}
-                className="flex min-h-14 items-center gap-3 border-4 border-foreground bg-accent px-6 py-3 text-lg font-black text-on-accent shadow-[8px_8px_0_var(--color-foreground)]"
+                className="flex min-h-14 items-center gap-3 border-4 border-foreground bg-accent px-6 py-3 text-lg font-bold text-on-accent shadow-[8px_8px_0_var(--color-foreground)]"
               >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                   <path d="M4 12h14M13 6l6 6-6 6" />
