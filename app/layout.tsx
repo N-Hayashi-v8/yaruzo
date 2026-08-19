@@ -1,16 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "task",
@@ -19,10 +8,18 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="ja"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="ja" className="h-full antialiased">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        {/* next/font は日本語サブセットを持たない（latin 系のみ）ため <link> で読む。
+            Google の unicode-range 分割で必要な字だけ落ちる */}
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@700;900&family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap"
+        />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
