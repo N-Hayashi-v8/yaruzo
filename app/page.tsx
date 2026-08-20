@@ -314,7 +314,7 @@ export default function Home() {
                 </span>
               </button>
               {cheer && (
-                <span className="flex max-w-md rotate-2 flex-col gap-1.5 bg-accent px-5 py-3 text-on-accent">
+                <span className="flex max-w-xl rotate-2 flex-col gap-1.5 bg-accent px-5 py-3 text-on-accent">
                   <span className="font-display text-2xl leading-none">{cheer.word}</span>
                   <span className="text-[13px] leading-snug font-bold">
                     {cheer.quote.text}
@@ -336,9 +336,10 @@ export default function Home() {
               <span className="text-lg font-bold">やること なし。それでいい。</span>
             </div>
             {/* 何もしていない状態を肯定する言葉だけ置く。ここで急かすと罪悪感になる */}
-            {/* 1 行に収めたいので幅は広めに取る。訳の側も 30 字前後で切ってある */}
-            <blockquote className="max-w-4xl border-l-[10px] border-foreground pl-5">
-              <p className="text-2xl leading-snug font-black text-pretty sm:text-3xl">
+            {/* 1 行に収めるために幅は制限しない（親いっぱい）。訳は削らない方針。
+                30px だと最長 46 字で 1380px 要るのでフル HD 未満だと折り返す。24px なら収まる */}
+            <blockquote className="border-l-[10px] border-foreground pl-5">
+              <p className="text-xl leading-snug font-black text-pretty sm:text-2xl">
                 {restQuote.text}
               </p>
               <footer className="mt-2 font-mono text-[13px] font-bold opacity-60">
