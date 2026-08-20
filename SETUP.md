@@ -17,11 +17,11 @@ Windows / macOS / Linux どれでも可。OS 依存コードなし。
 
 ## 2. セットアップ
 
-リポジトリ: <https://github.com/N-Hayashi-v8/tsugi>（private）
+リポジトリ: <https://github.com/N-Hayashi-v8/yaruzo>（private）
 
 ```
-gh repo clone N-Hayashi-v8/tsugi
-cd tsugi
+gh repo clone N-Hayashi-v8/yaruzo
+cd yaruzo
 npm install
 npm run dev
 ```
@@ -35,7 +35,7 @@ Windows なら 2 回目以降は **`dev.bat` をダブルクリック**でいい
 `gh` が無い環境なら:
 
 ```
-git clone https://github.com/N-Hayashi-v8/tsugi.git
+git clone https://github.com/N-Hayashi-v8/yaruzo.git
 ```
 
 private のため認証が要る。`gh auth login`（HTTPS / Authenticate Git with your GitHub credentials は Yes）を
@@ -45,7 +45,7 @@ private のため認証が要る。`gh auth login`（HTTPS / Authenticate Git wi
 ## 3. 動作確認
 
 ```bash
-npm test        # 20 件通ればロジック健全
+npm test        # 通ればロジック健全
 npm run lint
 npm run build
 npx tsc --noEmit
@@ -96,12 +96,16 @@ localStorage.setItem('task-app-v1', `ここに貼る`); location.reload();
 
 ## 5. リポジトリの現状
 
-- リモート: `origin` = <https://github.com/N-Hayashi-v8/tsugi>（private）
+- リモート: `origin` = <https://github.com/N-Hayashi-v8/yaruzo>（private）
 - 既定ブランチ: `main`
 - P1〜P4 + UI（ブルータリスト方向）までコミット済み・push 済み
 
-旧リポジトリ名 `ter` からリネーム済み。旧 URL は GitHub がリダイレクトするが、
-新しく書くときは `tsugi` を使う。
+リポジトリ名は `ter` → `tsugi` → `yaruzo` と 2 回リネームしている。
+旧 URL は GitHub がリダイレクトするが、新しく書くときは `yaruzo` を使う。
+
+**ローカルのフォルダ名は git 管理外。** クローン先が `tsugi` のままでも動く。
+揃えたいなら開発サーバを止めてから手で `yaruzo` にリネームし、`.next/` を消す
+（絶対パスがキャッシュに残る）。`npm run dev` が作り直す。
 
 ## 6. 読む順番
 
