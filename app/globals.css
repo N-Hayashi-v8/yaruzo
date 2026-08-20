@@ -33,3 +33,14 @@ body {
   font-family: var(--font-sans);
   font-weight: 500;
 }
+
+/* Tailwind v4 の preflight は button の cursor を default にする。押せるものは指に戻す */
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+/* 押下感。ハードシャドウを消して影の方向へ沈める。transition は付けない（押した瞬間に出す） */
+button:not(:disabled):active {
+  transform: translate(3px, 3px);
+  box-shadow: none;
+}
