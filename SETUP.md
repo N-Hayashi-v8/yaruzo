@@ -4,9 +4,10 @@
 
 ## 1. 必要な環境
 
-- **Node 26 以上**（開発時: v26.5.0 / npm 11.17.0）
-  - Node 22 未満だと `npm test` が落ちる。テストは追加依存なしで動かすため
-    **Node の TypeScript 直接実行**（型ストリップ）に乗っている。`node --test lib/*.test.ts`
+- **Node**（動作確認済み: v26.5.0 / npm 11.17.0、v24.18.0 / npm 11.16.0）
+  - 条件は「**フラグなしで `.ts` を直接実行できる Node**」。古い Node だと `npm test` が落ちる。
+    テストは追加依存なしで動かすため **Node の TypeScript 直接実行**（型ストリップ）に
+    乗っている。`node --test lib/*.test.ts`（`package.json` の `test`）
   - `tsconfig.json` の `allowImportingTsExtensions: true` も同じ理由。テストが `./select.ts` と
     拡張子付きで import するため。消すな
 - git
@@ -43,12 +44,16 @@ private のため認証が要る。`gh auth login`（HTTPS / Authenticate Git wi
 
 ## 3. 動作確認
 
-```
-npm test        # 5 件通ればロジック健全
+```bash
+npm test        # 20 件通ればロジック健全
 npm run lint
-npx tsc --noEmit
 npm run build
+npx tsc --noEmit
 ```
+
+`npx tsc --noEmit` は **`npm run build` の後に叩く**。`app/layout.tsx` が使う `LayoutProps` は
+Next.js が `.next/types/` に自動生成する型で、clone 直後（`.next/` が無い状態）だと
+`error TS2304: Cannot find name 'LayoutProps'` で落ちる。ビルドが通っていれば型も揃う。
 
 ## 4. git 管理外で、手で運ぶ必要があるもの
 

@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# tsugi
 
-## Getting Started
+原始人口調。
 
-First, run the development server:
+ADHD 当事者用。目的は **着火**。タスク管理ではない。
+
+**次の1個だけ見せる。タイマー回す。それだけ。**
+
+リスト管理アプリ ではない。**起動装置**。
+全体量を見せると凍る → NOW 画面はタスク1件のみ。画面遷移 なし。
+
+## 動かす
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev     # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Windows なら 2 回目以降は `dev.bat` ダブルクリック。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 中身
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Next.js (App Router) + TypeScript + Tailwind
+- 永続化: **localStorage のみ**。サーバ・DB・認証・外部サービス なし
+- データは PC のブラウザに閉じる。PC を変えると引き継がれない（→ SETUP.md 4-1）
 
-## Learn More
+```text
+app/page.tsx        # NOW 画面
+app/overlays.tsx    # 追加 / 分解 / 眠い / 今日
+lib/types.ts        # 型定義（データ形状の唯一の真実）
+lib/store.ts        # localStorage 読み書き 集約
+lib/select.ts       # 次タスク選択ロジック（通常 / 眠気）
+```
 
-To learn more about Next.js, take a look at the following resources:
+## 状態
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+P1〜P4 実装済み。
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- P1 NOW・追加・完了・カウントダウン・永続化
+- P2 分解（手動 3 分割）
+- P3 眠い・起床/光ログ
+- P4 累積カウンタ・完了時のランダム一言
 
-## Deploy on Vercel
+## 読む順番
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. [CLAUDE.md](CLAUDE.md) — 前提と禁止事項。曲げるな
+2. [DESIGN.md](DESIGN.md) — 根拠・全画面仕様・作らないものリスト
+3. [SETUP.md](SETUP.md) — 環境構築、別 PC への引き継ぎ
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`AGENTS.md` は Next.js が自動生成・自動再追記。手で消しても `next dev` が戻す。
+
+## 作らない
+
+優先度ソート / タグ / フィルタ / カレンダー同期 / 連続ストリーク /
+達成率グラフ / 通知・催促 / 認証・同期・共有 / 設定画面。
+
+理由は DESIGN.md 7章。要求されても却下。
