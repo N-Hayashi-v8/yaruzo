@@ -24,3 +24,10 @@ export type Store = {
   tasks: Task[];
   logs: DayLog[];
 };
+
+/** 名言 1 件。永続化しない定数（lib/quotes.ts） */
+export type Quote = {
+  text: string;
+  /** 誰の言葉か。出典が特定できないものは入れない */
+  by: string;
+};

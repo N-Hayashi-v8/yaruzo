@@ -12,7 +12,8 @@ import {
   todayKey,
 } from "@/lib/store";
 import { completedLeaves, hasStimulating, nextTask, taskQueue } from "@/lib/select";
-import type { Store } from "@/lib/types";
+import { DONE_QUOTES, REST_QUOTES, pickQuote } from "@/lib/quotes";
+import type { Quote, Store } from "@/lib/types";
 import {
   AddOverlay,
   SleepyOverlay,
@@ -72,7 +73,9 @@ export default function Home() {
   const [sleepy, setSleepy] = useState(false);
   /** 身体タスクは永続化しない。覚醒を戻すためだけの一時タスク */
   const [body, setBody] = useState<BodyTask | null>(null);
-  const [cheer, setCheer] = useState<string | null>(null);
+  const [cheer, setCheer] = useState<{ word: string; quote: Quote } | null>(null);
+  /** からっぽ画面に出す言葉。からっぽに入るたび引き直す（下の shownTaskId のブロック） */
+  const [restQuote, setRestQuote] = useState<Quote>(() => pickQuote(REST_QUOTES));
   const running = endAt !== null;
 
   // localStorage は client でしか読めない。lazy init だと hydration が食い違うので mount 後に読む
@@ -90,6 +93,7 @@ export default function Home() {
     setShownTaskId(taskId);
     setRemaining(estimateMin * 60);
     setEndAt(null);
+    if (taskId === null) setRestQuote(pickQuote(REST_QUOTES)); // からっぽに入った
   }
 
   useEffect(() => {
@@ -102,9 +106,10 @@ export default function Home() {
     return () => clearInterval(id);
   }, [endAt]);
 
+  // 一言だけなら 1.6 秒で足りたが、名言を添えたので読む時間を足す
   useEffect(() => {
     if (cheer === null) return;
-    const id = setTimeout(() => setCheer(null), 1600);
+    const id = setTimeout(() => setCheer(null), 3600);
     return () => clearTimeout(id);
   }, [cheer]);
 
@@ -133,7 +138,10 @@ export default function Home() {
 
   const complete = useCallback(() => {
     if (!taskId) return;
-    setCheer(CHEERS[Math.floor(Math.random() * CHEERS.length)]);
+    setCheer({
+      word: CHEERS[Math.floor(Math.random() * CHEERS.length)],
+      quote: pickQuote(DONE_QUOTES),
+    });
     if (body) {
       setBody(null); // 身体タスクは記録に残さない
       return;
@@ -304,8 +312,14 @@ export default function Home() {
                 </span>
               </button>
               {cheer && (
-                <span className="rotate-3 bg-accent px-5 py-2.5 font-display text-2xl text-on-accent">
-                  {cheer}
+                <span className="flex max-w-md rotate-2 flex-col gap-1.5 bg-accent px-5 py-3 text-on-accent">
+                  <span className="font-display text-2xl leading-none">{cheer.word}</span>
+                  <span className="text-[13px] leading-snug font-bold">
+                    {cheer.quote.text}
+                    <span className="mt-0.5 block font-mono text-[11px] opacity-70">
+                      — {cheer.quote.by}
+                    </span>
+                  </span>
                 </span>
               )}
             </div>
@@ -319,6 +333,15 @@ export default function Home() {
               <span className="h-2.5 w-44 border-[3px] border-current bg-accent" />
               <span className="text-lg font-bold">やること なし。それでいい。</span>
             </div>
+            {/* 何もしていない状態を肯定する言葉だけ置く。ここで急かすと罪悪感になる */}
+            <blockquote className="max-w-2xl border-l-[10px] border-foreground pl-5">
+              <p className="text-2xl leading-snug font-black text-pretty sm:text-3xl">
+                {restQuote.text}
+              </p>
+              <footer className="mt-2 font-mono text-[13px] font-bold opacity-60">
+                — {restQuote.by}
+              </footer>
+            </blockquote>
             <button
               onClick={() => setOverlay("add")}
               className="flex min-h-[68px] items-center gap-3.5 self-start border-[5px] border-foreground bg-accent px-7 py-3.5 text-2xl font-black text-on-accent shadow-[10px_10px_0_var(--color-foreground)] sm:text-3xl"
