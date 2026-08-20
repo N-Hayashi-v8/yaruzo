@@ -39,7 +39,18 @@ P3 眠い・起床/光ログ / P4 累積カウンタ・完了時のランダム�
 npm run dev     # 開発サーバ
 npm run build   # ビルド
 npm run lint    # lint
+npm test        # テスト（node --test。20 件）
 ```
+
+## git
+
+作業者 1人。レビューする相手 いない。
+
+- **コミット・push は 都度 確認しない。** 作業が通ったら そのまま `main` に push まで やる
+- ブランチ 切らない。`main` 直。PR 不要
+- push 前に通すもの: `npm test` → `npm run lint` → `npm run build` → `npx tsc --noEmit`
+  （`tsc` は build の後。理由は SETUP.md 3章）
+- 落ちたら push しない。落ちたと言う
 
 ## 実装方針
 
