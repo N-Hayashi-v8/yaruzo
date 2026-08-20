@@ -336,7 +336,8 @@ export default function Home() {
               <span className="text-lg font-bold">やること なし。それでいい。</span>
             </div>
             {/* 何もしていない状態を肯定する言葉だけ置く。ここで急かすと罪悪感になる */}
-            <blockquote className="max-w-2xl border-l-[10px] border-foreground pl-5">
+            {/* 1 行に収めたいので幅は広めに取る。訳の側も 30 字前後で切ってある */}
+            <blockquote className="max-w-4xl border-l-[10px] border-foreground pl-5">
               <p className="text-2xl leading-snug font-black text-pretty sm:text-3xl">
                 {restQuote.text}
               </p>
