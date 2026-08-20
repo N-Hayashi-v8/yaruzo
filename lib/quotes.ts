@@ -1,12 +1,16 @@
 import type { Quote } from "./types";
 
 /*
- * 出典が章まで特定できるものだけを入れる。
+ * 出典が章・ページ・日付まで特定できるものだけを入れる。
  * ネットの名言集は誤帰属が多い（「エジソンの 99%」「アインシュタインの〜」の類）。
  * 帰属が確認できない言葉は、どれだけ気の利いた文でも入れない。
+ * 足すときは原典に当たってから。孫引きの引用サイトは出典にしない。
  *
- * 結果として漢籍と日本古典に偏る。近代の人物は誤帰属を掴みやすいので慎重に。
- * 足すときは原典の章を確認してから。
+ * 落とした例: キング牧師「飛べなければ走れ、走れなければ歩け」。
+ * 1960 年スペルマン大学での演説とされるが、引用サイト以外に届かなかった。
+ *
+ * 近代の人物は原文が英語なので、日本語は拙訳。定訳ではない。
+ * 原文と出典は下のコメントに残してあるので、訳を直したければそこから。
  */
 
 /**
@@ -35,6 +39,65 @@ export const REST_QUOTES: Quote[] = [
     text: "ゆく河の流れは絶えずして、しかももとの水にあらず。",
     by: "鴨長明 方丈記 冒頭",
   },
+
+  // ここから近代。原文は英語、訳は拙訳。原文を各項に付ける
+
+  // "I wish to suggest that a man may be very industrious, and yet not spend his time well."
+  {
+    text: "人は とても勤勉でありながら、時間をうまく使っていないことがある。",
+    by: "ソロー 原則なき生活 1863",
+  },
+  // "If a man walk in the woods for love of them half of each day, he is in danger of
+  //  being regarded as a loafer; but if he spends his whole day as a speculator, ...
+  //  he is esteemed an industrious and enterprising citizen."
+  {
+    text: "一日の半分を、森が好きだからと森を歩けば、怠け者と見なされかねない。",
+    by: "ソロー 原則なき生活 1863",
+  },
+  // "It would be glorious to see mankind at leisure for once."
+  {
+    text: "人類が 一度くらい 暇でいるところを 見てみたい。",
+    by: "ソロー 原則なき生活 1863",
+  },
+  // "I think that there is far too much work done in the world, that immense harm is
+  //  caused by the belief that work is virtuous"
+  {
+    text: "世の中では 働きすぎだ。労働は美徳だという信念が、計り知れない害をもたらしている。",
+    by: "ラッセル 怠惰への讃歌 1932",
+  },
+  // "The morality of work is the morality of slaves, and the modern world has no need of slavery."
+  {
+    text: "労働の道徳は 奴隷の道徳だ。現代の世界に 奴隷は要らない。",
+    by: "ラッセル 怠惰への讃歌 1932",
+  },
+  // "If you can spend a perfectly useless afternoon in a perfectly useless manner,
+  //  you have learned how to live."（p.153）
+  {
+    text: "まったく無用な午後を、まったく無用に過ごせるなら、生き方を身につけたということだ。",
+    by: "林語堂 生活の発見 1937",
+  },
+  // "Those who are wise won't be busy, and those who are too busy can't be wise."（p.150）
+  {
+    text: "賢い者は 忙しくしない。忙しすぎる者は 賢くなれない。",
+    by: "林語堂 生活の発見 1937",
+  },
+  // "A man who has to be punctually at a certain place at five o'clock has the whole
+  //  afternoon from one to five ruined for him already."（p.163）
+  {
+    text: "五時にどこかへ 必ず行かねばならない者は、一時から五時までを すでに台無しにされている。",
+    by: "林語堂 生活の発見 1937",
+  },
+  // "I lie on the beach like a crocodile and let myself be roasted by the sun.
+  //  I never see a newspaper and don't give a damn for what is called the world."
+  {
+    text: "ワニのように浜辺に寝そべり、日に焼かれるままにしている。新聞も見ない。世間などどうでもいい。",
+    by: "アインシュタイン ボルンへの手紙 1918",
+  },
+  // "I never think of the future. It comes soon enough."
+  {
+    text: "未来のことは考えない。どうせ すぐ来る。",
+    by: "アインシュタイン 会見 1930",
+  },
 ];
 
 /**
@@ -58,6 +121,13 @@ export const DONE_QUOTES: Quote[] = [
   {
     text: "山径の蹊間も、介然として之を用うれば、路と成る。",
     by: "孟子 尽心下",
+  },
+
+  // "Life is like riding a bicycle. To keep your balance you must keep moving."
+  // 息子エドゥアルトへの手紙、1930 年 2 月 5 日
+  {
+    text: "人生は 自転車に乗るようなものだ。倒れないためには、動き続けるしかない。",
+    by: "アインシュタイン 息子への手紙 1930",
   },
 ];
 
