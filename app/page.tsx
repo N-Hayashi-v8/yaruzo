@@ -217,7 +217,9 @@ export default function Home() {
   return (
     <>
       <header className="flex h-[68px] flex-shrink-0 items-center gap-6 bg-foreground px-6 text-background">
-        <span className="font-display text-[26px] tracking-[0.14em]">NOW</span>
+        {/* font-display は 30px 未満だと日本語の画数が潰れる（globals.css）。
+            NOW は 26px で足りていたが、アプリ名にしたので下限まで上げる */}
+        <span className="font-display text-[30px] tracking-[0.08em]">やるぞ！</span>
         <span className="h-5 flex-1 bg-[repeating-linear-gradient(135deg,currentColor_0_6px,transparent_6px_14px)] opacity-55" />
         {sleepy && (
           <span className="border-2 border-current px-2 py-0.5 font-mono text-xs font-bold tracking-[0.1em]">
