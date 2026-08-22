@@ -68,7 +68,7 @@ export function AddOverlay({
       <div className="flex flex-col gap-3">
         {withPresets.map((p) => (
           <div key={p.label} className="flex flex-wrap items-center gap-2.5">
-            <span className="w-24 flex-shrink-0 border-[3px] border-current px-2 py-1 text-center text-[15px] font-black">
+            <span className="min-w-24 flex-shrink-0 border-[3px] border-current px-2 py-1 text-center text-[15px] font-black whitespace-nowrap">
               {p.label}
             </span>
             {p.presets.map((preset) => (
