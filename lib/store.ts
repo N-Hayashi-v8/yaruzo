@@ -1,4 +1,4 @@
-import type { DayLog, Store, Task } from "./types";
+import type { DayLog, Pillar, Store, Task } from "./types";
 
 const KEY = "task-app-v1";
 const EMPTY: Store = { tasks: [], logs: [] };
@@ -9,7 +9,10 @@ export function load(): Store {
     const raw = localStorage.getItem(KEY);
     if (!raw) return EMPTY;
     const parsed = JSON.parse(raw) as Partial<Store>;
-    return { tasks: parsed.tasks ?? [], logs: parsed.logs ?? [] };
+    // 柱を持たない旧タスクは「その他」に寄せる。undefined のままだと
+    // どの柱にも属さず抽選から漏れて、永遠に出てこなくなる
+    const tasks = (parsed.tasks ?? []).map((t) => ({ ...t, pillar: t.pillar ?? null }));
+    return { tasks, logs: parsed.logs ?? [] };
   } catch {
     // 壊れた JSON で起動不能にしない
     return EMPTY;
@@ -21,13 +24,14 @@ export function save(store: Store): void {
   localStorage.setItem(KEY, JSON.stringify(store));
 }
 
-/** 追加時の入力は title だけ。見積・刺激度は既定値（入力項目を増やさない） */
-export function newTask(title: string): Task {
+/** 追加時の入力は title と柱だけ。見積・刺激度は既定値（入力項目を増やさない） */
+export function newTask(title: string, pillar: Pillar | null = null): Task {
   return {
     id: crypto.randomUUID(),
     title,
     estimateMin: 15,
     stimulation: 2,
+    pillar,
     parentId: null,
     createdAt: Date.now(),
     completedAt: null,
@@ -61,7 +65,7 @@ export function splitTask(store: Store, parentId: string, titles: string[]): Sto
   if (!parent || clean.length === 0) return store;
   const each = Math.max(5, Math.round(parent.estimateMin / clean.length));
   const children = clean.map((title) => ({
-    ...newTask(title),
+    ...newTask(title, parent.pillar),
     parentId,
     estimateMin: each,
     stimulation: parent.stimulation,

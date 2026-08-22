@@ -1,10 +1,15 @@
+/** 3 本の柱。増やさない。可変にした瞬間タグ管理になる（DESIGN.md 7章） */
+export type Pillar = "sing" | "onepiece" | "duelplays";
+
 export type Task = {
   id: string;
   title: string;
-  /** 見積分。カウントダウンの初期値 */
+  /** 目安の分数。カウントアップのバーが満ちる位置。超えても止まらない */
   estimateMin: number;
   /** 刺激度。1=退屈 3=面白い。眠気モードの並べ替えキー（P3） */
   stimulation: 1 | 2 | 3;
+  /** 属する柱。null = 柱なし（雑タスク）。抽選では「その他」枠 */
+  pillar: Pillar | null;
   /** 分解で生えた子タスクの親 ID */
   parentId: string | null;
   createdAt: number;

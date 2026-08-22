@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   completeTask,
   load,
@@ -11,9 +11,10 @@ import {
   splitTask,
   todayKey,
 } from "@/lib/store";
-import { completedLeaves, hasStimulating, nextTask, taskQueue } from "@/lib/select";
+import { completedLeaves, hasStimulating, nextTask, pickedTask, taskQueue } from "@/lib/select";
 import { DONE_QUOTES, REST_QUOTES, pickQuote } from "@/lib/quotes";
-import type { Quote, Store } from "@/lib/types";
+import { pillarLabel, type PillarDef } from "@/lib/pillars";
+import type { Pillar, Quote, Store } from "@/lib/types";
 import {
   AddOverlay,
   SleepyOverlay,
@@ -66,45 +67,54 @@ export default function Home() {
   const [overlay, setOverlay] = useState<OverlayName | null>(null);
   const [draft, setDraft] = useState("");
   const [steps, setSteps] = useState(["", "", ""]);
-  const [remaining, setRemaining] = useState(0);
-  /** 実行中の終了時刻(ms)。null = 停止中。経過は実時刻から引く（タブ非表示で setInterval が絞られてもズレない） */
-  const [endAt, setEndAt] = useState<number | null>(null);
+  /** 経過秒。集中が切れるまでやるので上限なし（DESIGN.md 1章 時間盲） */
+  const [elapsed, setElapsed] = useState(0);
+  /** 実行中の仮想開始時刻(ms)。null = 停止中。実時刻から引く（タブ非表示で setInterval が絞られてもズレない） */
+  const [startedAt, setStartedAt] = useState<number | null>(null);
   /** ponytail: 眠気モードはセッション限り。リロードで戻る。日をまたいで保つなら DayLog に足す */
   const [sleepy, setSleepy] = useState(false);
+  /** 抽選で引いた 1 件。null = 引き直す（起動直後・完了直後・R） */
+  const [pickedId, setPickedId] = useState<string | null>(null);
+  /** 追加オーバーレイで選んでいる柱。既定は「その他」（雑タスクが一番多い） */
+  const [addPillar, setAddPillar] = useState<Pillar | null>(null);
   /** 身体タスクは永続化しない。覚醒を戻すためだけの一時タスク */
   const [body, setBody] = useState<BodyTask | null>(null);
   const [cheer, setCheer] = useState<{ word: string; quote: Quote } | null>(null);
   /** からっぽ画面に出す言葉。からっぽに入るたび引き直す（下の shownTaskId のブロック） */
   const [restQuote, setRestQuote] = useState<Quote>(() => pickQuote(REST_QUOTES));
-  const running = endAt !== null;
+  const running = startedAt !== null;
 
   // localStorage は client でしか読めない。lazy init だと hydration が食い違うので mount 後に読む
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => setStore(load()), []);
+  useEffect(() => {
+    const s = load();
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setStore(s);
+    setPickedId(nextTask(s.tasks)?.id ?? null); // 起動時に 1 回引く
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, []);
 
-  const stored = store ? nextTask(store.tasks, sleepy) : null;
+  const stored = store ? pickedTask(store.tasks, sleepy, pickedId) : null;
   const task = body ?? stored;
   const taskId = task?.id ?? null;
   const estimateMin = task?.estimateMin ?? 0;
 
-  // タスクが変わったらタイマーを積み直す（render 中の state 調整。effect にすると 1 フレーム古い値が出る）
+  // タスクが変わったらタイマーを積み直す（render 中の state 調整。理由は上と同じ）
   const [shownTaskId, setShownTaskId] = useState(taskId);
   if (shownTaskId !== taskId) {
     setShownTaskId(taskId);
-    setRemaining(estimateMin * 60);
-    setEndAt(null);
+    setElapsed(0);
+    setStartedAt(null);
     if (taskId === null) setRestQuote(pickQuote(REST_QUOTES)); // からっぽに入った
   }
 
   useEffect(() => {
-    if (endAt === null) return;
-    const id = setInterval(() => {
-      const left = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
-      setRemaining(left);
-      if (left === 0) setEndAt(null);
-    }, 250);
+    if (startedAt === null) return;
+    const id = setInterval(
+      () => setElapsed(Math.floor((Date.now() - startedAt) / 1000)),
+      250,
+    );
     return () => clearInterval(id);
-  }, [endAt]);
+  }, [startedAt]);
 
   // 一言だけなら 1.6 秒で足りたが、名言を添えたので読む時間を足す
   useEffect(() => {
@@ -113,30 +123,29 @@ export default function Home() {
     return () => clearTimeout(id);
   }, [cheer]);
 
-  const toggle = useCallback(() => {
+  // 以下のハンドラは useCallback で包まない。React Compiler が自動でメモ化する。
+  // 手で包むと「既存のメモ化を保持できない」と判定されてコンパイル自体が飛ぶ
+  const toggle = () => {
     if (!taskId) return;
-    if (endAt === null) {
-      // 0 まで落ちた後の再開は見積分から積み直す（行き止まりにしない）
-      const from = remaining > 0 ? remaining : estimateMin * 60;
-      setRemaining(from);
-      setEndAt(Date.now() + from * 1000);
+    if (startedAt === null) {
+      // 経過分を引いた時刻を開始点にすると、再開しても積み上がりが続く
+      setStartedAt(Date.now() - elapsed * 1000);
     } else {
-      setRemaining(Math.max(0, Math.ceil((endAt - Date.now()) / 1000)));
-      setEndAt(null);
+      setElapsed(Math.floor((Date.now() - startedAt) / 1000));
+      setStartedAt(null);
     }
-  }, [taskId, endAt, remaining, estimateMin]);
+  };
 
-  const update = useCallback(
-    (fn: (s: Store) => Store) => {
-      if (!store) return;
-      const next = fn(store);
-      save(next);
-      setStore(next);
-    },
-    [store],
-  );
+  /** 保存して次の store を返す。完了後の抽選が更新後のタスクを要るので戻り値を持つ */
+  const update = (fn: (s: Store) => Store) => {
+    if (!store) return null;
+    const next = fn(store);
+    save(next);
+    setStore(next);
+    return next;
+  };
 
-  const complete = useCallback(() => {
+  const complete = () => {
     if (!taskId) return;
     setCheer({
       word: CHEERS[Math.floor(Math.random() * CHEERS.length)],
@@ -146,24 +155,38 @@ export default function Home() {
       setBody(null); // 身体タスクは記録に残さない
       return;
     }
-    update((s) => completeTask(s, taskId));
-  }, [taskId, body, update]);
+    const next = update((s) => completeTask(s, taskId));
+    if (next) setPickedId(nextTask(next.tasks, sleepy)?.id ?? null); // 済んだので次を引く
+  };
 
-  const add = useCallback(() => {
+  const add = () => {
     const title = draft.trim();
     if (!title) return;
-    update((s) => ({ ...s, tasks: [...s.tasks, newTask(title)] }));
+    update((s) => ({ ...s, tasks: [...s.tasks, newTask(title, addPillar)] }));
     setDraft("");
     setOverlay(null);
-  }, [draft, update]);
+  };
 
-  const split = useCallback(() => {
+  /** 柱の定番を 1 タップで生やす。preset が title / 目安 / 刺激度を上書きする */
+  const addPreset = (key: Pillar | null, preset: PillarDef["presets"][number]) => {
+    update((s) => ({ ...s, tasks: [...s.tasks, { ...newTask(preset.title, key), ...preset }] }));
+    setOverlay(null);
+  };
+
+  /** 引き直し。いま出ている 1 件を外して抽選する（同じものが出たら意味がない） */
+  const redraw = () => {
+    if (!store || body) return;
+    const rest = store.tasks.filter((t) => t.id !== pickedId);
+    setPickedId(nextTask(rest, sleepy)?.id ?? null);
+  };
+
+  const split = () => {
     if (!taskId || body) return;
     if (steps.every((t) => t.trim() === "")) return;
     update((s) => splitTask(s, taskId, steps));
     setSteps(["", "", ""]);
     setOverlay(null);
-  }, [taskId, body, steps, update]);
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -195,11 +218,16 @@ export default function Home() {
       } else if (e.key.toLowerCase() === "t") {
         e.preventDefault();
         setOverlay("today");
+      } else if (e.key.toLowerCase() === "r") {
+        e.preventDefault();
+        redraw();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [overlay, body, toggle, complete]);
+    // 依存配列なし = 毎 render 貼り替え。ハンドラは素の関数なのでどうせ毎回変わるし、
+    // 古い closure を掴むより安い（リスナ 1 個の付け外し）
+  });
 
   if (!store) return null;
 
@@ -212,7 +240,8 @@ export default function Home() {
     .sort((a, b) => (a.completedAt ?? 0) - (b.completedAt ?? 0));
   const log = logFor(store, today);
   const total = estimateMin * 60;
-  const donePct = total > 0 ? Math.round((1 - remaining / total) * 100) : 0;
+  // 目安を超えたらバーが満ちて止まるだけ。超過を責めない（DESIGN.md 4章）
+  const donePct = total > 0 ? Math.min(100, Math.round((elapsed / total) * 100)) : 0;
 
   return (
     <>
@@ -240,16 +269,21 @@ export default function Home() {
                   身体タスク
                 </span>
               ) : (
-                <span
-                  className={`border-[3px] border-current px-3 py-1 text-sm font-bold tracking-[0.08em] ${
-                    stored?.stimulation === 3 ? "bg-accent text-on-accent" : ""
-                  }`}
-                >
-                  刺激度 {stored?.stimulation}
-                </span>
+                <>
+                  <span className="border-[3px] border-current bg-foreground px-3 py-1 text-sm font-bold tracking-[0.08em] text-background">
+                    {pillarLabel(stored?.pillar ?? null)}
+                  </span>
+                  <span
+                    className={`border-[3px] border-current px-3 py-1 text-sm font-bold tracking-[0.08em] ${
+                      stored?.stimulation === 3 ? "bg-accent text-on-accent" : ""
+                    }`}
+                  >
+                    刺激度 {stored?.stimulation}
+                  </span>
+                </>
               )}
               <span className="border-[3px] border-current px-3 py-1 text-sm font-bold tracking-[0.08em]">
-                見積 {task.estimateMin}分
+                目安 {task.estimateMin}分
               </span>
               <span className="flex-1" />
               <span className="font-mono text-[13px] font-bold opacity-50">1件だけ 表示</span>
@@ -267,16 +301,16 @@ export default function Home() {
               >
                 <div
                   className="font-mono text-6xl leading-none font-black tabular-nums sm:text-8xl"
-                  aria-label={`残り ${mmss(remaining)}`}
+                  aria-label={`経過 ${mmss(elapsed)}`}
                 >
-                  {mmss(remaining)}
+                  {mmss(elapsed)}
                 </div>
               </div>
               <div
                 className="pb-4 text-[15px] font-bold tracking-[0.18em]"
                 style={{ writingMode: "vertical-rl" }}
               >
-                {running ? "実行中" : remaining === 0 ? "時間切れ" : "停止中"}
+                {running ? "実行中" : "停止中"}
               </div>
             </div>
 
@@ -296,7 +330,7 @@ export default function Home() {
                     <path d="M6 3l14 9-14 9z" />
                   )}
                 </svg>
-                {running ? "一時停止" : remaining === 0 ? "もう一回" : "開始"}
+                {running ? "一時停止" : "開始"}
                 <span className="border-2 border-current px-1.5 py-0.5 font-mono text-xs opacity-75">
                   SPACE
                 </span>
@@ -365,6 +399,7 @@ export default function Home() {
         <HintButton keyLabel="SPACE" label="開始/停止" onClick={toggle} disabled={!task} />
         <HintButton keyLabel="ENTER" label="完了" onClick={complete} disabled={!task} />
         <HintButton keyLabel="N" label="追加" onClick={() => setOverlay("add")} />
+        <HintButton keyLabel="R" label="引き直し" onClick={redraw} disabled={!stored} />
         <HintButton
           keyLabel="D"
           label="分解"
@@ -381,6 +416,9 @@ export default function Home() {
         <AddOverlay
           draft={draft}
           onDraft={setDraft}
+          pillar={addPillar}
+          onPillar={setAddPillar}
+          onPreset={addPreset}
           onAdd={add}
           onClose={() => setOverlay(null)}
         />
@@ -399,7 +437,10 @@ export default function Home() {
       {overlay === "sleepy" && (
         <SleepyOverlay
           sleepy={sleepy}
-          onToggle={() => setSleepy((v) => !v)}
+          onToggle={() => {
+            setSleepy((v) => !v);
+            setPickedId(null); // 並べ替えの基準が変わるので引き直す
+          }}
           hasStim={hasStimulating(store.tasks)}
           queue={taskQueue(store.tasks, sleepy).slice(0, 3)}
           onPickBody={(b) => {

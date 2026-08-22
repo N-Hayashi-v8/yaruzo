@@ -33,6 +33,7 @@ const task = (over: Partial<Task> & { id: string }): Task => ({
   title: over.id,
   estimateMin: 45,
   stimulation: 2,
+  pillar: null,
   parentId: null,
   createdAt: 10,
   completedAt: null,
