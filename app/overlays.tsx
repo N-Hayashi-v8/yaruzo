@@ -209,9 +209,6 @@ export function SplitOverlay({
           割る
           <span className="border-2 border-current px-1.5 py-0.5 font-mono text-xs">ENTER</span>
         </button>
-        <span className="text-sm font-bold opacity-60">
-          埋めた分だけ 子になる。1個でもいい。親は 子が全部済んだら 自動で完了
-        </span>
       </div>
     </Overlay>
   );
@@ -249,11 +246,8 @@ export function SleepyOverlay({
             >
               {sleepy ? "ON" : "OFF"}
             </span>
-            <span className="flex flex-1 flex-col justify-center gap-1 px-5 py-4">
+            <span className="flex flex-1 items-center px-5 py-4">
               <span className="text-xl font-black sm:text-2xl">面白い順に 並べ替える</span>
-              <span className="text-[15px] font-bold opacity-60">
-                切替は 今日だけ。明日 勝手に戻る
-              </span>
             </span>
           </button>
 
@@ -311,9 +305,6 @@ export function SleepyOverlay({
               </button>
             ))}
           </div>
-          <span className="text-[15px] font-bold opacity-60">
-            選ぶと 5分の目安で始まる。覚醒が戻ってから タスクに帰る
-          </span>
         </>
       )}
     </Overlay>
