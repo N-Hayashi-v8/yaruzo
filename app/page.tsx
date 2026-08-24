@@ -11,10 +11,17 @@ import {
   splitTask,
   todayKey,
 } from "@/lib/store";
-import { completedLeaves, hasStimulating, nextTask, pickedTask, taskQueue } from "@/lib/select";
+import {
+  completedLeaves,
+  hasStimulating,
+  nextTask,
+  pickedTask,
+  taskQueue,
+  withoutPassed,
+} from "@/lib/select";
 import { DONE_QUOTES, REST_QUOTES, pickQuote } from "@/lib/quotes";
 import { pillarLabel, type PillarDef } from "@/lib/pillars";
-import type { Pillar, Quote, Store } from "@/lib/types";
+import type { Pillar, Quote, Store, Task } from "@/lib/types";
 import {
   AddOverlay,
   SleepyOverlay,
@@ -79,6 +86,11 @@ export default function Home() {
   const [addPillar, setAddPillar] = useState<Pillar | null>(null);
   /** 身体タスクは永続化しない。覚醒を戻すためだけの一時タスク */
   const [body, setBody] = useState<BodyTask | null>(null);
+  /**
+   * P で「いったんやめた」タスク。抽選から外れる。
+   * 永続化しない（閉じれば戻る）。残すと「避けている一覧」になって罪悪感を作る
+   */
+  const [passed, setPassed] = useState<ReadonlySet<string>>(new Set());
   const [cheer, setCheer] = useState<{ word: string; quote: Quote } | null>(null);
   /** からっぽ画面に出す言葉。からっぽに入るたび引き直す（下の shownTaskId のブロック） */
   const [restQuote, setRestQuote] = useState<Quote>(() => pickQuote(REST_QUOTES));
@@ -99,7 +111,9 @@ export default function Home() {
     }
   }, []);
 
-  const stored = store ? pickedTask(store.tasks, sleepy, pickedId) : null;
+  const live = (tasks: Task[]) => withoutPassed(tasks, passed);
+
+  const stored = store ? pickedTask(live(store.tasks), sleepy, pickedId) : null;
   const task = body ?? stored;
   const taskId = task?.id ?? null;
   const estimateMin = task?.estimateMin ?? 0;
@@ -162,7 +176,7 @@ export default function Home() {
       return;
     }
     const next = update((s) => completeTask(s, taskId));
-    if (next) setPickedId(nextTask(next.tasks, sleepy)?.id ?? null); // 済んだので次を引く
+    if (next) setPickedId(nextTask(live(next.tasks), sleepy)?.id ?? null); // 済んだので次を引く
   };
 
   const add = () => {
@@ -182,8 +196,28 @@ export default function Home() {
   /** 引き直し。いま出ている 1 件を外して抽選する（同じものが出たら意味がない） */
   const redraw = () => {
     if (!store || body) return;
-    const rest = store.tasks.filter((t) => t.id !== pickedId);
+    const rest = live(store.tasks).filter((t) => t.id !== pickedId);
     setPickedId(nextTask(rest, sleepy)?.id ?? null);
+  };
+
+  /**
+   * いったんやめる。R と違って外した分が積み上がるので、押すたびに違うものが出る。
+   * 全部やめたら積み上げを捨てて最初から引き直す（詰ませない）。
+   */
+  const pass = () => {
+    if (!store || body || !taskId) return;
+    const next = new Set(passed).add(taskId);
+    const pick = nextTask(
+      store.tasks.filter((t) => !next.has(t.id)),
+      sleepy,
+    );
+    if (pick) {
+      setPassed(next);
+      setPickedId(pick.id);
+    } else {
+      setPassed(new Set());
+      setPickedId(nextTask(store.tasks, sleepy)?.id ?? null);
+    }
   };
 
   const split = () => {
@@ -227,6 +261,9 @@ export default function Home() {
       } else if (e.key.toLowerCase() === "r") {
         e.preventDefault();
         redraw();
+      } else if (e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        pass();
       }
     };
     window.addEventListener("keydown", onKey);
@@ -406,6 +443,7 @@ export default function Home() {
         <HintButton keyLabel="ENTER" label="完了" onClick={complete} disabled={!task} />
         <HintButton keyLabel="N" label="追加" onClick={() => setOverlay("add")} />
         <HintButton keyLabel="R" label="引き直し" onClick={redraw} disabled={!stored} />
+        <HintButton keyLabel="P" label="やめる" onClick={pass} disabled={!stored} />
         <HintButton
           keyLabel="D"
           label="分解"

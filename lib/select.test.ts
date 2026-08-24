@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { completedLeaves, hasStimulating, nextTask, taskQueue } from "./select.ts";
+import {
+  completedLeaves,
+  hasStimulating,
+  nextTask,
+  taskQueue,
+  withoutPassed,
+} from "./select.ts";
 import type { Task } from "./types.ts";
 
 const task = (over: Partial<Task> & { id: string; createdAt: number }): Task => ({
@@ -151,4 +157,20 @@ test("眠気モードは柱を無視して刺激度の高い順", () => {
     task({ id: "op", createdAt: 20, pillar: "onepiece", stimulation: 3 }),
   ];
   assert.equal(nextTask(tasks, true, () => 0)?.id, "op");
+});
+
+test("やめた分は候補から外れる", () => {
+  const tasks = [task({ id: "a", createdAt: 10 }), task({ id: "b", createdAt: 20 })];
+  assert.deepEqual(
+    withoutPassed(tasks, new Set(["a"])).map((t) => t.id),
+    ["b"],
+  );
+});
+
+test("全部やめたら元のまま返す（詰ませない）", () => {
+  const tasks = [task({ id: "a", createdAt: 10 }), task({ id: "b", createdAt: 20 })];
+  assert.deepEqual(
+    withoutPassed(tasks, new Set(["a", "b"])).map((t) => t.id),
+    ["a", "b"],
+  );
 });

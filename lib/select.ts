@@ -77,3 +77,12 @@ export function completedLeaves(tasks: Task[]): Task[] {
   );
   return tasks.filter((t) => t.completedAt !== null && !parentIds.has(t.id));
 }
+
+/**
+ * 「いったんやめた」分を除いた候補。
+ * 全部やめていたら元のまま返す。逃げ道を塞いで画面をからっぽにしない。
+ */
+export function withoutPassed(tasks: Task[], passed: ReadonlySet<string>): Task[] {
+  const rest = tasks.filter((t) => !passed.has(t.id));
+  return rest.length > 0 ? rest : tasks;
+}
