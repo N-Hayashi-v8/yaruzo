@@ -307,17 +307,11 @@ export default function Home() {
         {task ? (
           <>
             <div className="flex flex-wrap items-center gap-2.5">
-              {body ? (
+              {/* 刺激度は出さない。入力手段が無くて全部おなじ値になるので、
+                  出しても情報が無い。眠気モードの並べ替えには裏で使う */}
+              {body && (
                 <span className="border-[3px] border-current bg-accent px-3 py-1 text-sm font-bold tracking-[0.08em] text-on-accent">
                   身体タスク
-                </span>
-              ) : (
-                <span
-                  className={`border-[3px] border-current px-3 py-1 text-sm font-bold tracking-[0.08em] ${
-                    stored?.stimulation === 3 ? "bg-accent text-on-accent" : ""
-                  }`}
-                >
-                  刺激度 {stored?.stimulation}
                 </span>
               )}
               <span className="border-[3px] border-current px-3 py-1 text-sm font-bold tracking-[0.08em]">

@@ -251,7 +251,7 @@ export function SleepyOverlay({
               {sleepy ? "ON" : "OFF"}
             </span>
             <span className="flex flex-1 flex-col justify-center gap-1 px-5 py-4">
-              <span className="text-xl font-black sm:text-2xl">刺激度の高い順に 並べ替える</span>
+              <span className="text-xl font-black sm:text-2xl">面白い順に 並べ替える</span>
               <span className="text-[15px] font-bold opacity-60">
                 切替は 今日だけ。明日 勝手に戻る
               </span>
@@ -260,7 +260,7 @@ export function SleepyOverlay({
 
           <div className="flex flex-col gap-3">
             <span className="font-mono text-xs font-bold tracking-[0.12em]">
-              {sleepy ? "刺激度 高い順" : "通常 = 古い順"}
+              {sleepy ? "面白い順" : "通常 = 古い順"}
             </span>
             {queue.map((t, i) => (
               <div
@@ -269,8 +269,10 @@ export function SleepyOverlay({
                   i === 0 ? "bg-accent text-on-accent" : ""
                 }`}
               >
+                {/* 刺激度は入力手段が無くて全部おなじ値になるので、出す意味がない。
+                    ここは何番目に出るかを見せる */}
                 <span className="flex w-16 flex-shrink-0 items-center justify-center border-r-4 border-current font-display text-2xl">
-                  {t.stimulation}
+                  {i + 1}
                 </span>
                 <span className="flex flex-1 items-center px-5 py-3.5 text-xl font-black">
                   {t.title}
