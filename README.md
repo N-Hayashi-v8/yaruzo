@@ -17,7 +17,8 @@ npm install
 npm run dev     # http://localhost:3000
 ```
 
-Windows なら 2 回目以降は `dev.bat` ダブルクリック。
+Windows で使うだけなら `yaruzo.bat` ダブルクリック（ビルドして本番サーバを立て、アプリ窓で開く）。
+PWA としてインストールすれば 2 回目以降はサーバごと不要（→ SETUP.md 3）。
 
 ## 中身
 

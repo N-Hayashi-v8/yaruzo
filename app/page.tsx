@@ -91,6 +91,12 @@ export default function Home() {
     setStore(s);
     setPickedId(nextTask(s.tasks)?.id ?? null); // 起動時に 1 回引く
     /* eslint-enable react-hooks/set-state-in-effect */
+
+    // Service Worker。サーバを起動しなくてもアプリ窓が開くようにする（public/sw.js）。
+    // dev で登録すると古いバンドルがキャッシュから返って開発が壊れるので本番だけ
+    if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js");
+    }
   }, []);
 
   const stored = store ? pickedTask(store.tasks, sleepy, pickedId) : null;
