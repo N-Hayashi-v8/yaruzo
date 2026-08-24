@@ -106,57 +106,21 @@ test("completedLeaves は分解の親を数えない", () => {
   assert.deepEqual(completedLeaves(tasks).map((t) => t.id), ["c1", "c2", "solo"]);
 });
 
-// 柱の重み: 歌 3 / ワンピ 2 / デュエプレ 1 / その他 2（lib/pillars.ts）。
-// rand は [0,1) を返す関数として注入する
-test("柱を重み付きで引く（全柱に在庫あり、合計 8）", () => {
+test("柱に関係なく古い順（抽選しない）", () => {
   const tasks = [
-    task({ id: "sing", createdAt: 10, pillar: "sing" }),
-    task({ id: "op", createdAt: 20, pillar: "onepiece" }),
     task({ id: "dp", createdAt: 30, pillar: "duelplays" }),
-    task({ id: "etc", createdAt: 40, pillar: null }),
-  ];
-  assert.equal(nextTask(tasks, false, () => 0)?.id, "sing"); // 0〜3
-  assert.equal(nextTask(tasks, false, () => 0.5)?.id, "op"); // 3〜5
-  assert.equal(nextTask(tasks, false, () => 0.7)?.id, "dp"); // 5〜6
-  assert.equal(nextTask(tasks, false, () => 0.9)?.id, "etc"); // 6〜8
-});
-
-test("在庫の無い柱は抽選に入らない", () => {
-  // 歌 3 とその他 2 だけ。合計 5
-  const tasks = [
     task({ id: "sing", createdAt: 10, pillar: "sing" }),
     task({ id: "etc", createdAt: 20, pillar: null }),
   ];
-  assert.equal(nextTask(tasks, false, () => 0)?.id, "sing");
-  assert.equal(nextTask(tasks, false, () => 0.9)?.id, "etc"); // 4.5 → その他
-  // 端（rand が 1 に限りなく近い）でも null を返さない
-  assert.equal(nextTask(tasks, false, () => 0.999999)?.id, "etc");
+  assert.equal(nextTask(tasks)?.id, "sing");
 });
 
-test("柱の中は古い順", () => {
-  const tasks = [
-    task({ id: "new", createdAt: 30, pillar: "sing" }),
-    task({ id: "old", createdAt: 10, pillar: "sing" }),
-  ];
-  assert.equal(nextTask(tasks, false, () => 0)?.id, "old");
-});
-
-test("完了済みしか無い柱は在庫ゼロ扱い", () => {
-  const tasks = [
-    task({ id: "sing", createdAt: 10, pillar: "sing", completedAt: 1 }),
-    task({ id: "etc", createdAt: 20, pillar: null }),
-  ];
-  // 歌が候補から外れるので、どこを引いてもその他しか出ない
-  assert.equal(nextTask(tasks, false, () => 0)?.id, "etc");
-  assert.equal(nextTask(tasks, false, () => 0.99)?.id, "etc");
-});
-
-test("眠気モードは柱を無視して刺激度の高い順", () => {
+test("眠気モードは刺激度の高い順", () => {
   const tasks = [
     task({ id: "sing", createdAt: 10, pillar: "sing", stimulation: 1 }),
     task({ id: "op", createdAt: 20, pillar: "onepiece", stimulation: 3 }),
   ];
-  assert.equal(nextTask(tasks, true, () => 0)?.id, "op");
+  assert.equal(nextTask(tasks, true)?.id, "op");
 });
 
 test("やめた分は候補から外れる", () => {

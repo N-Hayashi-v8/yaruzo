@@ -80,14 +80,14 @@ export default function Home() {
   const [startedAt, setStartedAt] = useState<number | null>(null);
   /** ponytail: 眠気モードはセッション限り。リロードで戻る。日をまたいで保つなら DayLog に足す */
   const [sleepy, setSleepy] = useState(false);
-  /** 抽選で引いた 1 件。null = 引き直す（起動直後・完了直後・R） */
+  /** いま出している 1 件。null = 引き直す（起動直後・完了直後・眠気切替） */
   const [pickedId, setPickedId] = useState<string | null>(null);
   /** 追加オーバーレイで選んでいる柱。既定は「その他」（雑タスクが一番多い） */
   const [addPillar, setAddPillar] = useState<Pillar | null>(null);
   /** 身体タスクは永続化しない。覚醒を戻すためだけの一時タスク */
   const [body, setBody] = useState<BodyTask | null>(null);
   /**
-   * P で「いったんやめた」タスク。抽選から外れる。
+   * P で「いったんやめた」タスク。候補から外れる。
    * 永続化しない（閉じれば戻る）。残すと「避けている一覧」になって罪悪感を作る
    */
   const [passed, setPassed] = useState<ReadonlySet<string>>(new Set());
@@ -156,7 +156,7 @@ export default function Home() {
     }
   };
 
-  /** 保存して次の store を返す。完了後の抽選が更新後のタスクを要るので戻り値を持つ */
+  /** 保存して次の store を返す。完了後に次を引くのが更新後のタスクを要るので戻り値を持つ */
   const update = (fn: (s: Store) => Store) => {
     if (!store) return null;
     const next = fn(store);
@@ -193,15 +193,8 @@ export default function Home() {
     setOverlay(null);
   };
 
-  /** 引き直し。いま出ている 1 件を外して抽選する（同じものが出たら意味がない） */
-  const redraw = () => {
-    if (!store || body) return;
-    const rest = live(store.tasks).filter((t) => t.id !== pickedId);
-    setPickedId(nextTask(rest, sleepy)?.id ?? null);
-  };
-
   /**
-   * いったんやめる。R と違って外した分が積み上がるので、押すたびに違うものが出る。
+   * いったんやめる。外した分が積み上がるので、押すたびに違うものが出る。
    * 全部やめたら積み上げを捨てて最初から引き直す（詰ませない）。
    */
   const pass = () => {
@@ -258,9 +251,6 @@ export default function Home() {
       } else if (e.key.toLowerCase() === "t") {
         e.preventDefault();
         setOverlay("today");
-      } else if (e.key.toLowerCase() === "r") {
-        e.preventDefault();
-        redraw();
       } else if (e.key.toLowerCase() === "p") {
         e.preventDefault();
         pass();
@@ -442,7 +432,6 @@ export default function Home() {
         <HintButton keyLabel="SPACE" label="開始/停止" onClick={toggle} disabled={!task} />
         <HintButton keyLabel="ENTER" label="完了" onClick={complete} disabled={!task} />
         <HintButton keyLabel="N" label="追加" onClick={() => setOverlay("add")} />
-        <HintButton keyLabel="R" label="引き直し" onClick={redraw} disabled={!stored} />
         <HintButton keyLabel="P" label="やめる" onClick={pass} disabled={!stored} />
         <HintButton
           keyLabel="D"

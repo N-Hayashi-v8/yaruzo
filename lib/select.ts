@@ -1,4 +1,3 @@
-import { PILLARS } from "./pillars.ts";
 import type { Task } from "./types";
 
 /** 未完了で、子タスクを持たない（＝それ自体が着手できる）もの */
@@ -21,37 +20,18 @@ export function taskQueue(tasks: Task[], sleepy = false): Task[] {
 }
 
 /**
- * 並んだ候補から柱を重み付きで引き、その柱の先頭を返す。
- * 在庫の無い柱は候補に入らない（デュエプレのタスクが無い昼は自動で 2 択になる）。
+ * 次にやる 1 件。並びの先頭をそのまま出す。
+ * 抽選はしない。柱を重みで引いても、柱の中は最古 1 件に固定されていたので
+ * 実際に出る組み合わせは柱の数（最大 4 通り）しかなく、ランダムとして働いていなかった。
+ * 柱の比率は在庫がそのまま決める。気が乗らなければ `P` で送る（DESIGN.md 3章）。
  */
-function pickByPillar(queue: Task[], rand: () => number): Task {
-  const live = PILLARS.filter((p) => queue.some((t) => t.pillar === p.key));
-  const total = live.reduce((sum, p) => sum + p.weight, 0);
-  let r = rand() * total;
-  for (const p of live) {
-    r -= p.weight;
-    if (r < 0) return queue.find((t) => t.pillar === p.key) ?? queue[0];
-  }
-  return queue[0]; // 浮動小数の端で回りきったとき
+export function nextTask(tasks: Task[], sleepy = false): Task | null {
+  return taskQueue(tasks, sleepy)[0] ?? null;
 }
 
 /**
- * 次にやる 1 件。通常は柱の重み付き抽選。
- * 眠気モードだけは柱を無視する（覚醒を戻すのが先。刺激度が全て）。
- */
-export function nextTask(
-  tasks: Task[],
-  sleepy = false,
-  rand: () => number = Math.random,
-): Task | null {
-  const queue = taskQueue(tasks, sleepy);
-  if (queue.length === 0) return null;
-  return sleepy ? queue[0] : pickByPillar(queue, rand);
-}
-
-/**
- * 抽選で引いた 1 件を id で取り戻す。候補から消えていれば先頭を出す。
- * 引き直すのは起動・完了・R・眠気切替のときだけ。表示のたびに引くと
+ * いま出している 1 件を id で取り戻す。候補から消えていれば先頭を出す。
+ * 引き直すのは起動・完了・P・眠気切替のときだけ。表示のたびに引くと
  * 画面が勝手に入れ替わる。
  */
 export function pickedTask(tasks: Task[], sleepy: boolean, id: string | null): Task | null {

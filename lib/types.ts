@@ -8,7 +8,7 @@ export type Task = {
   estimateMin: number;
   /** 刺激度。1=退屈 3=面白い。眠気モードの並べ替えキー（P3） */
   stimulation: 1 | 2 | 3;
-  /** 属する柱。null = 柱なし（雑タスク）。抽選では「その他」枠 */
+  /** 属する柱。null = 柱なし（雑タスク）。表示は「その他」 */
   pillar: Pillar | null;
   /** 分解で生えた子タスクの親 ID */
   parentId: string | null;

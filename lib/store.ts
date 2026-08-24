@@ -10,7 +10,7 @@ export function load(): Store {
     if (!raw) return EMPTY;
     const parsed = JSON.parse(raw) as Partial<Store>;
     // 柱を持たない旧タスクは「その他」に寄せる。undefined のままだと
-    // どの柱にも属さず抽選から漏れて、永遠に出てこなくなる
+    // どの柱にも属さず、柱のラベルが出なくなる
     const tasks = (parsed.tasks ?? []).map((t) => ({ ...t, pillar: t.pillar ?? null }));
     return { tasks, logs: parsed.logs ?? [] };
   } catch {
