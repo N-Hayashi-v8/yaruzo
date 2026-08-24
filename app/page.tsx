@@ -317,8 +317,6 @@ export default function Home() {
               <span className="border-[3px] border-current px-3 py-1 text-sm font-bold tracking-[0.08em]">
                 目安 {task.estimateMin}分
               </span>
-              <span className="flex-1" />
-              <span className="font-mono text-[13px] font-bold opacity-50">1件だけ 表示</span>
             </div>
 
             <h1 className="max-w-3xl font-display text-5xl leading-[1.08] tracking-tight text-pretty sm:text-7xl">
@@ -440,8 +438,6 @@ export default function Home() {
         />
         <HintButton keyLabel="S" label="眠い" onClick={() => setOverlay("sleepy")} />
         <HintButton keyLabel="T" label="今日" onClick={() => setOverlay("today")} />
-        <span className="flex-1" />
-        <span className="hidden opacity-60 lg:inline">リストは出さない</span>
       </footer>
 
       {overlay === "add" && (
