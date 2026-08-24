@@ -1,7 +1,7 @@
-import type { DayLog, Pillar, Store, Task } from "./types";
+import type { DayLog, Preset, Store, Task } from "./types";
 
 const KEY = "task-app-v1";
-const EMPTY: Store = { tasks: [], logs: [] };
+const EMPTY: Store = { tasks: [], logs: [], presets: [] };
 
 export function load(): Store {
   if (typeof window === "undefined") return EMPTY;
@@ -9,10 +9,8 @@ export function load(): Store {
     const raw = localStorage.getItem(KEY);
     if (!raw) return EMPTY;
     const parsed = JSON.parse(raw) as Partial<Store>;
-    // 柱を持たない旧タスクは「その他」に寄せる。undefined のままだと
-    // どの柱にも属さず、柱のラベルが出なくなる
-    const tasks = (parsed.tasks ?? []).map((t) => ({ ...t, pillar: t.pillar ?? null }));
-    return { tasks, logs: parsed.logs ?? [] };
+    // 定番を持たない旧データでも起動できるように、無い配列は空で埋める
+    return { tasks: parsed.tasks ?? [], logs: parsed.logs ?? [], presets: parsed.presets ?? [] };
   } catch {
     // 壊れた JSON で起動不能にしない
     return EMPTY;
@@ -24,18 +22,45 @@ export function save(store: Store): void {
   localStorage.setItem(KEY, JSON.stringify(store));
 }
 
-/** 追加時の入力は title と柱だけ。見積・刺激度は既定値（入力項目を増やさない） */
-export function newTask(title: string, pillar: Pillar | null = null): Task {
+/** 追加時の入力は title だけ。見積・刺激度は既定値（入力項目を増やさない） */
+export function newTask(title: string): Task {
   return {
     id: crypto.randomUUID(),
     title,
     estimateMin: 15,
     stimulation: 2,
-    pillar,
     parentId: null,
     createdAt: Date.now(),
     completedAt: null,
   };
+}
+
+/** 定番に足す。同じタイトルが既にあれば足さない（並びが増えるだけで探しにくくなる） */
+export function addPreset(store: Store, title: string): Store {
+  const clean = title.trim();
+  if (clean === "" || store.presets.some((p) => p.title === clean)) return store;
+  const preset: Preset = { id: crypto.randomUUID(), title: clean, lastUsedAt: Date.now() };
+  return { ...store, presets: [...store.presets, preset] };
+}
+
+export function removePreset(store: Store, id: string): Store {
+  return { ...store, presets: store.presets.filter((p) => p.id !== id) };
+}
+
+/** 定番からタスクを生やす。使った順に前へ出したいので lastUsedAt を更新する */
+export function spawnFromPreset(store: Store, id: string): Store {
+  const preset = store.presets.find((p) => p.id === id);
+  if (!preset) return store;
+  return {
+    ...store,
+    tasks: [...store.tasks, newTask(preset.title)],
+    presets: store.presets.map((p) => (p.id === id ? { ...p, lastUsedAt: Date.now() } : p)),
+  };
+}
+
+/** 追加画面に出す順。最近使ったものが先頭 */
+export function presetsByRecent(store: Store): Preset[] {
+  return [...store.presets].sort((a, b) => b.lastUsedAt - a.lastUsedAt);
 }
 
 /** ローカル日付の YYYY-MM-DD。UTC 変換を挟むと日付がずれるので getFullYear 系で組む */
@@ -65,7 +90,7 @@ export function splitTask(store: Store, parentId: string, titles: string[]): Sto
   if (!parent || clean.length === 0) return store;
   const each = Math.max(5, Math.round(parent.estimateMin / clean.length));
   const children = clean.map((title) => ({
-    ...newTask(title, parent.pillar),
+    ...newTask(title),
     parentId,
     estimateMin: each,
     stimulation: parent.stimulation,

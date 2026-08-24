@@ -20,10 +20,8 @@ export function taskQueue(tasks: Task[], sleepy = false): Task[] {
 }
 
 /**
- * 次にやる 1 件。並びの先頭をそのまま出す。
- * 抽選はしない。柱を重みで引いても、柱の中は最古 1 件に固定されていたので
- * 実際に出る組み合わせは柱の数（最大 4 通り）しかなく、ランダムとして働いていなかった。
- * 柱の比率は在庫がそのまま決める。気が乗らなければ `P` で送る（DESIGN.md 3章）。
+ * 次にやる 1 件。並びの先頭をそのまま出す。抽選も重み付けもしない。
+ * 気が乗らなければ `P` で送る（DESIGN.md 3章）。
  */
 export function nextTask(tasks: Task[], sleepy = false): Task | null {
   return taskQueue(tasks, sleepy)[0] ?? null;

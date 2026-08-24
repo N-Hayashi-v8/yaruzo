@@ -2,12 +2,16 @@
 
 import { useEffect, useState } from "react";
 import {
+  addPreset,
   completeTask,
   load,
   logFor,
   newTask,
+  presetsByRecent,
   putLog,
+  removePreset,
   save,
+  spawnFromPreset,
   splitTask,
   todayKey,
 } from "@/lib/store";
@@ -20,8 +24,7 @@ import {
   withoutPassed,
 } from "@/lib/select";
 import { DONE_QUOTES, REST_QUOTES, pickQuote } from "@/lib/quotes";
-import { pillarLabel, type PillarDef } from "@/lib/pillars";
-import type { Pillar, Quote, Store, Task } from "@/lib/types";
+import type { Quote, Store, Task } from "@/lib/types";
 import {
   AddOverlay,
   SleepyOverlay,
@@ -82,8 +85,6 @@ export default function Home() {
   const [sleepy, setSleepy] = useState(false);
   /** いま出している 1 件。null = 引き直す（起動直後・完了直後・眠気切替） */
   const [pickedId, setPickedId] = useState<string | null>(null);
-  /** 追加オーバーレイで選んでいる柱。既定は「その他」（雑タスクが一番多い） */
-  const [addPillar, setAddPillar] = useState<Pillar | null>(null);
   /** 身体タスクは永続化しない。覚醒を戻すためだけの一時タスク */
   const [body, setBody] = useState<BodyTask | null>(null);
   /**
@@ -182,14 +183,23 @@ export default function Home() {
   const add = () => {
     const title = draft.trim();
     if (!title) return;
-    update((s) => ({ ...s, tasks: [...s.tasks, newTask(title, addPillar)] }));
+    update((s) => ({ ...s, tasks: [...s.tasks, newTask(title)] }));
     setDraft("");
     setOverlay(null);
   };
 
-  /** 柱の定番を 1 タップで生やす。preset が title / 目安 / 刺激度を上書きする */
-  const addPreset = (key: Pillar | null, preset: PillarDef["presets"][number]) => {
-    update((s) => ({ ...s, tasks: [...s.tasks, { ...newTask(preset.title, key), ...preset }] }));
+  /** 入れると同時に定番へ残す。次からは 1 タップで生える */
+  const keep = () => {
+    const title = draft.trim();
+    if (!title) return;
+    update((s) => addPreset({ ...s, tasks: [...s.tasks, newTask(title)] }, title));
+    setDraft("");
+    setOverlay(null);
+  };
+
+  /** 定番を 1 タップで生やす */
+  const spawn = (id: string) => {
+    update((s) => spawnFromPreset(s, id));
     setOverlay(null);
   };
 
@@ -302,18 +312,13 @@ export default function Home() {
                   身体タスク
                 </span>
               ) : (
-                <>
-                  <span className="border-[3px] border-current bg-foreground px-3 py-1 text-sm font-bold tracking-[0.08em] text-background">
-                    {pillarLabel(stored?.pillar ?? null)}
-                  </span>
-                  <span
-                    className={`border-[3px] border-current px-3 py-1 text-sm font-bold tracking-[0.08em] ${
-                      stored?.stimulation === 3 ? "bg-accent text-on-accent" : ""
-                    }`}
-                  >
-                    刺激度 {stored?.stimulation}
-                  </span>
-                </>
+                <span
+                  className={`border-[3px] border-current px-3 py-1 text-sm font-bold tracking-[0.08em] ${
+                    stored?.stimulation === 3 ? "bg-accent text-on-accent" : ""
+                  }`}
+                >
+                  刺激度 {stored?.stimulation}
+                </span>
               )}
               <span className="border-[3px] border-current px-3 py-1 text-sm font-bold tracking-[0.08em]">
                 目安 {task.estimateMin}分
@@ -449,10 +454,11 @@ export default function Home() {
         <AddOverlay
           draft={draft}
           onDraft={setDraft}
-          pillar={addPillar}
-          onPillar={setAddPillar}
-          onPreset={addPreset}
+          presets={presetsByRecent(store)}
+          onSpawn={spawn}
+          onRemovePreset={(id) => update((s) => removePreset(s, id))}
           onAdd={add}
+          onKeep={keep}
           onClose={() => setOverlay(null)}
         />
       )}

@@ -13,7 +13,6 @@ const task = (over: Partial<Task> & { id: string; createdAt: number }): Task => 
   title: over.id,
   estimateMin: 15,
   stimulation: 2,
-  pillar: null,
   parentId: null,
   completedAt: null,
   ...over,
@@ -104,23 +103,6 @@ test("completedLeaves は分解の親を数えない", () => {
     task({ id: "solo", createdAt: 40, completedAt: 300 }),
   ];
   assert.deepEqual(completedLeaves(tasks).map((t) => t.id), ["c1", "c2", "solo"]);
-});
-
-test("柱に関係なく古い順（抽選しない）", () => {
-  const tasks = [
-    task({ id: "dp", createdAt: 30, pillar: "duelplays" }),
-    task({ id: "sing", createdAt: 10, pillar: "sing" }),
-    task({ id: "etc", createdAt: 20, pillar: null }),
-  ];
-  assert.equal(nextTask(tasks)?.id, "sing");
-});
-
-test("眠気モードは刺激度の高い順", () => {
-  const tasks = [
-    task({ id: "sing", createdAt: 10, pillar: "sing", stimulation: 1 }),
-    task({ id: "op", createdAt: 20, pillar: "onepiece", stimulation: 3 }),
-  ];
-  assert.equal(nextTask(tasks, true)?.id, "op");
 });
 
 test("やめた分は候補から外れる", () => {

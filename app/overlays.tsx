@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { PILLARS, type PillarDef } from "@/lib/pillars";
-import type { Pillar, Task } from "@/lib/types";
+
+import type { Preset, Task } from "@/lib/types";
 
 /** 5 分の身体タスク。覚醒が落ちて刺激度の高いタスクが無いときに出す（DESIGN.md 3章） */
 export const BODY_TASKS = [
@@ -53,47 +53,57 @@ function Head({ title, note, onClose }: { title: string; note: string; onClose: 
 export function AddOverlay({
   draft,
   onDraft,
-  pillar,
-  onPillar,
-  onPreset,
+  presets,
+  onSpawn,
+  onRemovePreset,
   onAdd,
+  onKeep,
   onClose,
 }: {
   draft: string;
   onDraft: (v: string) => void;
-  pillar: Pillar | null;
-  onPillar: (p: Pillar | null) => void;
-  onPreset: (key: Pillar | null, preset: PillarDef["presets"][number]) => void;
+  presets: Preset[];
+  onSpawn: (id: string) => void;
+  onRemovePreset: (id: string) => void;
   onAdd: () => void;
+  onKeep: () => void;
   onClose: () => void;
 }) {
-  const withPresets = PILLARS.filter((p) => p.presets.length > 0);
   return (
     <Overlay onClose={onClose}>
       <Head title="追加" note="定番は 1タップ。自由入力は 1行だけ" onClose={onClose} />
 
-      {/* 柱の定番は押すだけで生える。毎日おなじ文字を打つのは摩擦でしかない */}
-      <div className="flex flex-col gap-3">
-        {withPresets.map((p) => (
-          <div key={p.label} className="flex flex-wrap items-center gap-2.5">
-            <span className="min-w-24 flex-shrink-0 border-[3px] border-current px-2 py-1 text-center text-[15px] font-black whitespace-nowrap">
-              {p.label}
-            </span>
-            {p.presets.map((preset) => (
+      {/* 何度もやることは押すだけで生える。毎日おなじ文字を打つのは摩擦でしかない */}
+      {presets.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2.5">
+          {presets.map((p) => (
+            <div
+              key={p.id}
+              className="flex items-stretch border-4 border-foreground shadow-[6px_6px_0_var(--color-foreground)]"
+            >
               <button
-                key={preset.title}
-                onClick={() => onPreset(p.key, preset)}
-                className="flex min-h-12 items-center gap-2.5 border-4 border-foreground px-4 py-2 text-lg font-bold shadow-[6px_6px_0_var(--color-foreground)] active:bg-accent active:text-on-accent"
+                onClick={() => onSpawn(p.id)}
+                className="min-h-12 px-4 py-2 text-lg font-bold active:bg-accent active:text-on-accent"
               >
-                {preset.title}
-                <span className="font-mono text-[13px] opacity-60">{preset.estimateMin}分</span>
+                {p.title}
               </button>
-            ))}
-          </div>
-        ))}
-      </div>
+              {/* 消すのは押し間違えても痛くない。もう一度打てば戻る */}
+              <button
+                onClick={() => onRemovePreset(p.id)}
+                aria-label={`${p.title} を定番から外す`}
+                className="flex w-9 flex-shrink-0 items-center justify-center border-l-4 border-foreground opacity-45 active:bg-accent active:text-on-accent active:opacity-100"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" aria-hidden>
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
-      <div className="border-t-4 border-foreground" />
+      {/* 定番がまだ無いうちは区切り線だけが浮くので、まとめて出さない */}
+      {presets.length > 0 && <div className="border-t-4 border-foreground" />}
 
       <input
         autoFocus
@@ -106,22 +116,6 @@ export function AddOverlay({
         }}
         className="w-full border-[5px] border-foreground bg-background px-5 py-4 text-2xl font-bold outline-none placeholder:text-current placeholder:opacity-35 sm:text-4xl"
       />
-      <div className="flex flex-wrap items-center gap-2.5">
-        {PILLARS.map((p) => (
-          <button
-            key={p.label}
-            onClick={() => onPillar(p.key)}
-            className={`min-h-11 border-[3px] border-current px-3.5 py-1.5 text-[15px] font-bold ${
-              pillar === p.key ? "bg-accent text-on-accent" : ""
-            }`}
-          >
-            {p.label}
-          </button>
-        ))}
-        <span className="border-[3px] border-current px-3.5 py-1.5 text-[15px] font-bold opacity-60">
-          目安 15分
-        </span>
-      </div>
       <div className="flex flex-wrap items-center gap-4 border-t-4 border-foreground pt-5">
         <button
           onClick={onAdd}
@@ -133,6 +127,17 @@ export function AddOverlay({
           入れる
           <span className="border-2 border-current px-1.5 py-0.5 font-mono text-xs">ENTER</span>
         </button>
+        {/* 何度もやることだと気づいた時に、その場で定番へ送れる */}
+        <button
+          onClick={onKeep}
+          disabled={draft.trim() === ""}
+          className="min-h-12 border-[3px] border-current px-4 py-2 text-[15px] font-bold active:bg-accent active:text-on-accent disabled:opacity-35"
+        >
+          定番にも入れる
+        </button>
+        <span className="border-[3px] border-current px-3.5 py-1.5 text-[15px] font-bold opacity-60">
+          目安 15分
+        </span>
         <span className="font-mono text-[13px] font-bold opacity-60">ESC 閉じる</span>
       </div>
     </Overlay>

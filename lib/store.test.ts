@@ -1,9 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { completeTask, logFor, putLog, splitTask, todayKey } from "./store.ts";
+import {
+  addPreset,
+  completeTask,
+  logFor,
+  presetsByRecent,
+  putLog,
+  removePreset,
+  spawnFromPreset,
+  splitTask,
+  todayKey,
+} from "./store.ts";
 import type { Store, Task } from "./types.ts";
 
-const empty: Store = { tasks: [], logs: [] };
+const empty: Store = { tasks: [], logs: [], presets: [] };
 
 test("todayKey はローカル日付を YYYY-MM-DD で返す", () => {
   assert.equal(todayKey(new Date(2026, 0, 5, 23, 30)), "2026-01-05");
@@ -33,7 +43,6 @@ const task = (over: Partial<Task> & { id: string }): Task => ({
   title: over.id,
   estimateMin: 45,
   stimulation: 2,
-  pillar: null,
   parentId: null,
   createdAt: 10,
   completedAt: null,
@@ -41,7 +50,7 @@ const task = (over: Partial<Task> & { id: string }): Task => ({
 });
 
 test("splitTask は埋めた数だけ子を生やす", () => {
-  const s: Store = { tasks: [task({ id: "p" })], logs: [] };
+  const s: Store = { tasks: [task({ id: "p" })], logs: [], presets: [] };
   const out = splitTask(s, "p", ["A", "", "  ", "B"]);
   const children = out.tasks.filter((t) => t.parentId === "p");
   assert.deepEqual(children.map((c) => c.title), ["A", "B"]);
@@ -50,14 +59,14 @@ test("splitTask は埋めた数だけ子を生やす", () => {
 });
 
 test("splitTask の見積は最低 5 分、刺激度は親を継ぐ", () => {
-  const s: Store = { tasks: [task({ id: "p", estimateMin: 6, stimulation: 3 })], logs: [] };
+  const s: Store = { tasks: [task({ id: "p", estimateMin: 6, stimulation: 3 })], logs: [], presets: [] };
   const c = splitTask(s, "p", ["a", "b", "c"]).tasks.filter((t) => t.parentId === "p");
   assert.deepEqual(c.map((t) => t.estimateMin), [5, 5, 5]);
   assert.deepEqual(c.map((t) => t.stimulation), [3, 3, 3]);
 });
 
 test("splitTask は空入力や未知の親では何もしない", () => {
-  const s: Store = { tasks: [task({ id: "p" })], logs: [] };
+  const s: Store = { tasks: [task({ id: "p" })], logs: [], presets: [] };
   assert.equal(splitTask(s, "p", ["", " "]), s);
   assert.equal(splitTask(s, "nope", ["A"]), s);
 });
@@ -70,6 +79,7 @@ test("子が全部済むと親も自動で完了", () => {
       task({ id: "c2", parentId: "p" }),
     ],
     logs: [],
+    presets: [],
   };
   const one = completeTask(s, "c1", 100);
   assert.equal(one.tasks.find((t) => t.id === "p")?.completedAt, null);
@@ -85,7 +95,35 @@ test("入れ子の分解でも祖父まで畳む", () => {
       task({ id: "c", parentId: "p" }),
     ],
     logs: [],
+    presets: [],
   };
   const out = completeTask(s, "c", 300);
   assert.equal(out.tasks.find((t) => t.id === "g")?.completedAt, 300);
+});
+
+test("addPreset は同じタイトルを重ねない", () => {
+  const one = addPreset(empty, "皿洗い");
+  assert.deepEqual(one.presets.map((p) => p.title), ["皿洗い"]);
+  // 前後の空白だけ違うものも同じ扱い
+  assert.equal(addPreset(one, "  皿洗い  ").presets.length, 1);
+  assert.equal(addPreset(one, "   ").presets.length, 1);
+});
+
+test("spawnFromPreset はタスクを生やして最近使った順を前へ出す", () => {
+  const two = addPreset(addPreset(empty, "古い"), "新しい");
+  // 登録時刻を揃えてから片方を使う。使ったほうが先頭に来る
+  const flat = { ...two, presets: two.presets.map((p) => ({ ...p, lastUsedAt: 0 })) };
+  const target = flat.presets[0];
+  const used = spawnFromPreset(flat, target.id);
+  assert.deepEqual(used.tasks.map((t) => t.title), [target.title]);
+  assert.equal(presetsByRecent(used)[0].title, target.title);
+  assert.equal(used.presets.length, 2); // 使っても定番は減らない
+});
+
+test("removePreset は定番だけ消してタスクは残す", () => {
+  const s = addPreset(empty, "皿洗い");
+  const spawned = spawnFromPreset(s, s.presets[0].id);
+  const out = removePreset(spawned, s.presets[0].id);
+  assert.equal(out.presets.length, 0);
+  assert.deepEqual(out.tasks.map((t) => t.title), ["皿洗い"]);
 });
