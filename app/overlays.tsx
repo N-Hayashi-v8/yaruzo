@@ -29,15 +29,23 @@ function Overlay({ onClose, children }: { onClose: () => void; children: ReactNo
   );
 }
 
-function Head({ title, note, hint }: { title: string; note: string; hint: string }) {
+function Head({ title, note, onClose }: { title: string; note: string; onClose: () => void }) {
   return (
     <div className="flex flex-wrap items-baseline gap-4">
       <span className="font-display text-3xl sm:text-4xl">{title}</span>
       <span className="text-[15px] font-bold opacity-60">{note}</span>
       <span className="flex-1" />
-      <span className="border-[3px] border-current px-2 py-1 font-mono text-[13px] font-bold">
-        {hint}
-      </span>
+      {/* 開いたキー（N/D/S/T）を出していたが、押せない札は閉じ方の案内にならない。
+          ESC を知らなくても閉じられるよう、右上は × のボタンにする */}
+      <button
+        onClick={onClose}
+        aria-label="閉じる"
+        className="flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center self-center border-[3px] border-current active:bg-accent active:text-on-accent"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" aria-hidden>
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
     </div>
   );
 }
@@ -62,7 +70,7 @@ export function AddOverlay({
   const withPresets = PILLARS.filter((p) => p.presets.length > 0);
   return (
     <Overlay onClose={onClose}>
-      <Head title="追加" note="定番は 1タップ。自由入力は 1行だけ" hint="N" />
+      <Head title="追加" note="定番は 1タップ。自由入力は 1行だけ" onClose={onClose} />
 
       {/* 柱の定番は押すだけで生える。毎日おなじ文字を打つのは摩擦でしかない */}
       <div className="flex flex-col gap-3">
@@ -154,7 +162,7 @@ export function SplitOverlay({
   const filled = steps.some((s) => s.trim() !== "");
   return (
     <Overlay onClose={onClose}>
-      <Head title="分解" note="3つ 固定。数は選ばせない" hint="D" />
+      <Head title="分解" note="3つ 固定。数は選ばせない" onClose={onClose} />
 
       <div className="flex flex-wrap items-center gap-4 border-4 border-foreground bg-foreground px-5 py-3.5 text-background">
         <span className="font-mono text-xs font-bold tracking-[0.12em] opacity-70">いま これ</span>
@@ -222,7 +230,7 @@ export function SleepyOverlay({
 }) {
   return (
     <Overlay onClose={onClose}>
-      <Head title="眠い" note="眠いんじゃない。退屈だから 眠い" hint="S" />
+      <Head title="眠い" note="眠いんじゃない。退屈だから 眠い" onClose={onClose} />
 
       {hasStim ? (
         <>
@@ -335,7 +343,7 @@ export function TodayOverlay({
 
   return (
     <Overlay onClose={onClose}>
-      <Head title="今日" note="やったことだけ 並ぶ" hint="T" />
+      <Head title="今日" note="やったことだけ 並ぶ" onClose={onClose} />
 
       <div className="grid gap-6 sm:grid-cols-[1fr_18rem]">
         <div className="flex flex-col gap-2.5">
