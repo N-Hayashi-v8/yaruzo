@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   addPreset,
   completeTask,
@@ -11,6 +11,7 @@ import {
   putLog,
   removePreset,
   save,
+  setEstimate,
   spawnFromPreset,
   splitTask,
   todayKey,
@@ -161,6 +162,7 @@ export default function Home() {
   const update = (fn: (s: Store) => Store) => {
     if (!store) return null;
     const next = fn(store);
+    if (next === store) return store; // 中身が変わっていない（ドラッグ中の据え置き等）。保存を挟まない
     save(next);
     setStore(next);
     return next;
@@ -229,6 +231,38 @@ export default function Home() {
     update((s) => splitTask(s, taskId, steps));
     setSteps(["", "", ""]);
     setOverlay(null);
+  };
+
+  /**
+   * 目安分はつまんで上下に動かして変える。上へ 8px で +5 分。
+   * 数字を打たせると管理作業が増える（DESIGN.md 7章）ので入力欄は置かない。
+   * 身体タスクは Store に無い固定値なので触らせない。
+   */
+  const grip = useRef<{ y: number; base: number } | null>(null);
+
+  const dragStart = (e: React.PointerEvent<HTMLElement>) => {
+    if (!taskId || body) return;
+    e.currentTarget.setPointerCapture(e.pointerId); // 枠の外まで引いても追える
+    grip.current = { y: e.clientY, base: estimateMin };
+  };
+
+  const dragMove = (e: React.PointerEvent<HTMLElement>) => {
+    const g = grip.current;
+    if (!g || !taskId) return;
+    update((s) => setEstimate(s, taskId, g.base + Math.round((g.y - e.clientY) / 8) * 5));
+  };
+
+  const dragEnd = () => {
+    grip.current = null;
+  };
+
+  /** マウスが無い/使えないとき用。上下キーで 5 分ずつ */
+  const nudge = (e: React.KeyboardEvent) => {
+    if (!taskId || body) return;
+    const d = e.key === "ArrowUp" ? 5 : e.key === "ArrowDown" ? -5 : 0;
+    if (d === 0) return;
+    e.preventDefault();
+    update((s) => setEstimate(s, taskId, estimateMin + d));
   };
 
   useEffect(() => {
@@ -314,8 +348,23 @@ export default function Home() {
                   身体タスク
                 </span>
               )}
-              <span className="border-[3px] border-current px-3 py-1 text-sm font-bold tracking-[0.08em]">
-                目安 {task.estimateMin}分
+              <span
+                role="spinbutton"
+                aria-label="目安の分"
+                aria-valuenow={task.estimateMin}
+                aria-valuemin={5}
+                aria-valuemax={180}
+                tabIndex={body ? -1 : 0}
+                onPointerDown={dragStart}
+                onPointerMove={dragMove}
+                onPointerUp={dragEnd}
+                onPointerCancel={dragEnd}
+                onKeyDown={nudge}
+                className={`border-[3px] border-current px-3 py-1 text-sm font-bold tracking-[0.08em] ${
+                  body ? "" : "cursor-ns-resize touch-none select-none"
+                }`}
+              >
+                目安 {task.estimateMin}分{body ? "" : " ↕"}
               </span>
             </div>
 

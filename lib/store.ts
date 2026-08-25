@@ -114,3 +114,17 @@ export function completeTask(store: Store, id: string, at: number = Date.now()):
   }
   return { ...store, tasks };
 }
+
+/**
+ * 目安分を付け替える。NOW 画面のドラッグ用。
+ * 5 分刻み・5〜180 分に丸める。同じ値なら Store をそのまま返す（無駄な保存を挟まない）。
+ */
+export function setEstimate(store: Store, id: string, min: number): Store {
+  const clamped = Math.min(180, Math.max(5, Math.round(min / 5) * 5));
+  const task = store.tasks.find((t) => t.id === id);
+  if (!task || task.estimateMin === clamped) return store;
+  return {
+    ...store,
+    tasks: store.tasks.map((t) => (t.id === id ? { ...t, estimateMin: clamped } : t)),
+  };
+}

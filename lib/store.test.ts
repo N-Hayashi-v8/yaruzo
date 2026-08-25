@@ -4,9 +4,11 @@ import {
   addPreset,
   completeTask,
   logFor,
+  newTask,
   presetsByRecent,
   putLog,
   removePreset,
+  setEstimate,
   spawnFromPreset,
   splitTask,
   todayKey,
@@ -126,4 +128,18 @@ test("removePreset は定番だけ消してタスクは残す", () => {
   const out = removePreset(spawned, s.presets[0].id);
   assert.equal(out.presets.length, 0);
   assert.deepEqual(out.tasks.map((t) => t.title), ["皿洗い"]);
+});
+
+test("setEstimate は 5 分刻みで 5〜180 分に収める", () => {
+  const one = { ...empty, tasks: [newTask("書類")] };
+  const id = one.tasks[0].id;
+  assert.equal(setEstimate(one, id, 32).tasks[0].estimateMin, 30);
+  assert.equal(setEstimate(one, id, -40).tasks[0].estimateMin, 5);
+  assert.equal(setEstimate(one, id, 999).tasks[0].estimateMin, 180);
+});
+
+test("setEstimate は同じ値や未知の id では Store をそのまま返す", () => {
+  const one = { ...empty, tasks: [newTask("書類")] };
+  assert.equal(setEstimate(one, one.tasks[0].id, 15), one); // 既定値と同じ
+  assert.equal(setEstimate(one, "no-such-id", 30), one);
 });
