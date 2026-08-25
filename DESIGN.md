@@ -229,7 +229,14 @@ lib/types.ts        # 型定義
 lib/store.ts        # localStorage 読み書き 集約
 lib/select.ts       # 次タスク選択ロジック（古い順 / 眠気 / やめた分の除外）
 lib/quotes.ts       # 名言データ（からっぽ用 / 完了用）
+public/about.html   # 人に見せる用の説明ページ（/about）
 ```
+
+`public/about.html` は **素の HTML**。React を通さない。
+アプリの中身とは関係のない、外向けの説明だけを置く場所なので、
+JSX にせず 直接 手で直せる形にしてある。デザインの token は
+`app/globals.css` と同じものを 手で写している（アプリと同じ顔にするため）。
+NOW 画面から `/about` への導線は **張らない**。1画面 の原則は 曲げない
 
 `app/page.tsx` のイベントハンドラを `useCallback` で包むな。React Compiler が
 「既存のメモ化を保持できない」と判定して **コンパイル全体を飛ばす**（lint error）。

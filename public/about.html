@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="ADHD 当事者が自分のために作ったタスク着火アプリ「やるぞ！」。特性ごとの設計根拠と、あえて作らなかった機能。">
+<meta property="og:title" content="やるぞ！">
+<meta property="og:description" content="次の1個だけ見せる。タイマーを回す。それだけ。">
+<meta property="og:type" content="website">
+<title>やるぞ！ について</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@700;900&family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap">
+
+<style>
+  /* アプリ本体（app/globals.css）のトークンをそのまま継承する。
+     説明ページだけ別の顔にすると、同じ製品に見えない。 */
+  :root {
+    --ground: #f2eee3;
+    --ink: #16130f;
+    --acid: #d9f026;
+    --on-acid: #16130f;
+    --muted: #57503f;
+    --rule: #16130f;
+    --shadow: rgba(22, 19, 15, 1);
+  }
+
+  /* アプリ側と同じ反転。地と文字を入れ替え、蛍光アクセントは据え置く
+     （ライムは墨地でも読める） */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #16130f;
+      --ink: #f2eee3;
+      --muted: #a89f8a;
+      --rule: #f2eee3;
+      --shadow: rgba(242, 238, 227, 1);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #16130f;
+    --ink: #f2eee3;
+    --muted: #a89f8a;
+    --rule: #f2eee3;
+    --shadow: rgba(242, 238, 227, 1);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    font-weight: 500;
+    line-height: 1.75;
+    margin: 0;
+    padding: 0 20px 96px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 72px;
+  }
+
+  /* 30px 未満だと日本語の画数が潰れる書体。大見出し専用 */
+  .display {
+    font-family: "Dela Gothic One", "Hiragino Kaku Gothic ProN", sans-serif;
+    font-weight: 400;
+    line-height: 1.1;
+    text-wrap: balance;
+  }
+
+  .mono {
+    font-family: "Azeret Mono", ui-monospace, monospace;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  a { color: inherit; }
+
+  :focus-visible {
+    outline: 4px solid var(--acid);
+    outline-offset: 3px;
+  }
+
+  /* ---------- 冒頭 ---------- */
+
+  .masthead {
+    border-bottom: 6px solid var(--rule);
+    padding: 56px 0 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  .eyebrow {
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+  }
+
+  .wordmark {
+    font-size: clamp(56px, 13vw, 108px);
+    letter-spacing: 0.02em;
+    margin: 0;
+  }
+
+  .tagline {
+    font-size: clamp(19px, 2.6vw, 26px);
+    font-weight: 900;
+    line-height: 1.5;
+    margin: 0;
+    max-width: 22em;
+  }
+
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .fact {
+    border: 3px solid var(--rule);
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+
+  .fact span { color: var(--muted); font-weight: 700; }
+
+  /* ---------- セクション ---------- */
+
+  section {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .band {
+    background: var(--ink);
+    color: var(--ground);
+    padding: 10px 18px;
+    align-self: flex-start;
+    font-size: clamp(21px, 3vw, 30px);
+  }
+
+  p { margin: 0; max-width: 62ch; }
+
+  .lead {
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .note {
+    font-size: 15px;
+    color: var(--muted);
+  }
+
+  strong.mark {
+    background: var(--acid);
+    color: var(--on-acid);
+    font-weight: 900;
+    padding: 1px 5px;
+  }
+
+  /* ---------- 根拠 → 実装 ---------- */
+
+  .pairs {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .pair {
+    border: 4px solid var(--rule);
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  @media (min-width: 720px) {
+    .pair { grid-template-columns: 1fr 1.15fr; }
+    .pair .cause { border-right: 4px solid var(--rule); border-bottom: 0; }
+  }
+
+  .cause {
+    padding: 18px 20px;
+    border-bottom: 4px solid var(--rule);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .cause h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 900;
+    line-height: 1.45;
+  }
+
+  .cite {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+
+  .effect {
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .effect .label {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    color: var(--muted);
+  }
+
+  .effect p { font-size: 15px; line-height: 1.7; }
+
+  /* ---------- 操作 ---------- */
+
+  .keys {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+  }
+
+  .key {
+    border: 4px solid var(--rule);
+    box-shadow: 7px 7px 0 var(--shadow);
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .cap {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .cap b {
+    border: 3px solid var(--rule);
+    background: var(--acid);
+    color: var(--on-acid);
+    padding: 2px 9px;
+    font-family: "Azeret Mono", ui-monospace, monospace;
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  .cap span { font-size: 17px; font-weight: 900; }
+
+  .key p { font-size: 14px; line-height: 1.65; color: var(--muted); }
+
+  /* ---------- 作らなかったもの ---------- */
+
+  .refused {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .refused li {
+    list-style: none;
+    border: 3px solid var(--rule);
+    padding: 7px 13px;
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: line-through;
+    text-decoration-thickness: 3px;
+    color: var(--muted);
+  }
+
+  ul.refused { margin: 0; padding: 0; }
+
+  /* ---------- 中身 ---------- */
+
+  .stack {
+    border: 4px solid var(--rule);
+    padding: 22px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    align-items: baseline;
+    border-bottom: 2px solid var(--rule);
+    padding-bottom: 12px;
+  }
+
+  .row:last-child { border-bottom: 0; padding-bottom: 0; }
+
+  .row dt {
+    font-family: "Azeret Mono", ui-monospace, monospace;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    min-width: 128px;
+  }
+
+  .row dd { margin: 0; font-size: 15px; font-weight: 700; }
+
+  dl { margin: 0; }
+
+  /* ---------- 触る ---------- */
+
+  .try {
+    border: 6px solid var(--rule);
+    box-shadow: 12px 12px 0 var(--shadow);
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .try h2 { margin: 0; font-size: clamp(24px, 4vw, 34px); }
+
+  code {
+    font-family: "Azeret Mono", ui-monospace, monospace;
+    font-size: 13px;
+    font-weight: 700;
+    background: var(--acid);
+    color: var(--on-acid);
+    padding: 2px 6px;
+  }
+
+  /* アプリ本体のボタンと同じ挙動。押した瞬間に影の方向へ沈む（transition は付けない） */
+  .go {
+    align-self: flex-start;
+    border: 5px solid var(--rule);
+    background: var(--acid);
+    color: var(--on-acid);
+    box-shadow: 10px 10px 0 var(--shadow);
+    padding: 16px 26px;
+    font-size: clamp(17px, 3vw, 23px);
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    max-width: 100%;
+    word-break: break-all;
+  }
+
+  .go:active {
+    transform: translate(4px, 4px);
+    box-shadow: none;
+  }
+
+  .go .arrow { font-size: 0.85em; }
+
+  .steps {
+    margin: 0;
+    padding-left: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 15px;
+    max-width: 62ch;
+  }
+
+  footer {
+    border-top: 6px solid var(--rule);
+    padding-top: 24px;
+    font-size: 13px;
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow mono">個人開発 / 2026年8月</div>
+    <h1 class="wordmark display">やるぞ！</h1>
+    <p class="tagline">次の1個だけ見せる。タイマーを回す。それだけ。</p>
+    <div class="facts">
+      <div class="fact mono">8日間 <span>で作成</span></div>
+      <div class="fact mono">1,495行 <span>本体</span></div>
+      <div class="fact mono">301行 <span>テスト</span></div>
+      <div class="fact mono">3個 <span>だけ依存ライブラリ</span></div>
+      <div class="fact mono">0個 <span>サーバ・DB・アカウント</span></div>
+    </div>
+  </header>
+
+  <section>
+    <h2 class="band display">これは何か</h2>
+    <p class="lead">ADHD の当事者が、自分が動けるようにするために作ったアプリです。</p>
+    <p>やることを一覧で管理するアプリではありません。目的は<strong class="mark">着火</strong>、つまり「手をつける瞬間まで持っていくこと」の一点にしぼっています。画面にはやることが常に1件しか出ません。それ以外は見えません。</p>
+    <p class="note">名前は起動の合図そのものです。「やるぞ！」と思った瞬間に立ち上げるものとして作りました。</p>
+  </section>
+
+  <section>
+    <h2 class="band display">既存のアプリでは動けなかった</h2>
+    <p>市販のタスク管理アプリは、たいてい「重要な順に並べる」ことを前提にしています。重要度で並べ替え、締切の近いものを上に出し、一覧で全体を見せる。これは、重要だと理解すれば手が動く人のための設計です。</p>
+    <p>ADHD の脳は<strong class="mark">重要度では発火しません</strong>。手が動く条件は、興味・新しさ・挑戦・切迫・情熱のいずれかです（INCUP と呼ばれます）。だから「これが一番大事だ」と分かっていても、その一覧を前に固まったまま時間が過ぎます。</p>
+    <p>一覧そのものにも問題があります。残量が目に見えると、着手前に「これ全部やるのか」で凍ります。手をつける前の段階で止まるので、どれだけ丁寧に並べ替えても着手には至りません。</p>
+    <p class="note">意志や努力の不足として扱うと対策を誤ります。そこを出発点にしないことが、このアプリの前提です。</p>
+  </section>
+
+  <section>
+    <h2 class="band display">特性と、それに対する実装</h2>
+    <p>機能はすべて、対応する特性を1つ持っています。根拠のない機能は追加しない、という規則で作りました。</p>
+
+    <div class="pairs">
+
+      <article class="pair">
+        <div class="cause">
+          <h3>重要度では手が動かない（興味ベースの神経系）</h3>
+          <div class="cite mono">INCUP: 興味 / 新規 / 挑戦 / 緊急 / 情熱</div>
+        </div>
+        <div class="effect">
+          <div class="label mono">実装</div>
+          <p>重要度による並べ替えを持ちません。優先度も締切も設定できません。出るのは作った順の先頭1件だけです。並べ替える作業自体をなくしました。</p>
+        </div>
+      </article>
+
+      <article class="pair">
+        <div class="cause">
+          <h3>取りかかる瞬間に報酬系の反応が足りない</h3>
+          <div class="cite mono">Volkow et al. 2009 — 側坐核・中脳・尾状核</div>
+        </div>
+        <div class="effect">
+          <div class="label mono">実装</div>
+          <p>起動した時点で、もうやることが1件表示されています。ログインも設定も入力も挟みません。開始までの手数をゼロに近づけました。</p>
+        </div>
+      </article>
+
+      <article class="pair">
+        <div class="cause">
+          <h3>時間の経過が体感できない（時間盲）</h3>
+          <div class="cite mono">time blindness</div>
+        </div>
+        <div class="effect">
+          <div class="label mono">実装</div>
+          <p>経過時間を常に大きく表示します。<strong class="mark">数えるのは増える方向だけ</strong>です。残り時間を減らしていく表示は、ゼロになった瞬間が「時間切れ＝失敗」になるので採用していません。終わりの時刻は決めません。</p>
+        </div>
+      </article>
+
+      <article class="pair">
+        <div class="cause">
+          <h3>大きいタスクを前にすると固まる</h3>
+          <div class="cite mono">task paralysis</div>
+        </div>
+        <div class="effect">
+          <div class="label mono">実装</div>
+          <p>「分解」を押すと、3つの問いが出ます。最初の5分でできることは何か。次は何か。終わりの目印は何か。埋めた分だけ小さいタスクになります。問いは固定で、数も選ばせません。</p>
+        </div>
+      </article>
+
+      <article class="pair">
+        <div class="cause">
+          <h3>眠気は覚醒が落ちている状態で、退屈が原因になる</h3>
+          <div class="cite mono">hypoarousal（低覚醒）</div>
+        </div>
+        <div class="effect">
+          <div class="label mono">実装</div>
+          <p>「眠い」を押すと、面白い順に並べ替えます。「眠いからできない」ではなく「退屈だから眠い」という順序で扱います。出せるものがなければ、5分の身体を動かす行動（歩く・水を飲む・顔を洗う）を出します。</p>
+        </div>
+      </article>
+
+      <article class="pair">
+        <div class="cause">
+          <h3>就寝・起床が後ろにずれ続ける</h3>
+          <div class="cite mono">睡眠相後退（ADHD 成人の有病率 26〜78%）</div>
+        </div>
+        <div class="effect">
+          <div class="label mono">実装</div>
+          <p>起床時刻と「朝に光を浴びたか」を1タップで記録します。入力項目はこの2つだけです。記録が途切れても何も言いません。</p>
+        </div>
+      </article>
+
+      <article class="pair">
+        <div class="cause">
+          <h3>連続記録が途切れると、恥からアプリごと使わなくなる</h3>
+          <div class="cite mono">ストリークの恥スパイラル</div>
+        </div>
+        <div class="effect">
+          <div class="label mono">実装</div>
+          <p>数えるのは<strong class="mark">累積だけ</strong>です（「今月 47」）。連続日数、達成率、カレンダーの色分けは持ちません。何もしなかった日を表示する場所がそもそもありません。</p>
+        </div>
+      </article>
+
+      <article class="pair">
+        <div class="cause">
+          <h3>同じ演出は2日で効かなくなる</h3>
+          <div class="cite mono">新規性の減衰</div>
+        </div>
+        <div class="effect">
+          <div class="label mono">実装</div>
+          <p>完了したときの言葉を毎回変えます。あわせて出典の確かな引用を30件用意し、そこからも引きます。減衰することを前提にした作りです。</p>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <section>
+    <h2 class="band display">できること</h2>
+    <p>操作は6つだけです。キーボードでも、画面下のボタンでも同じことができます。</p>
+    <div class="keys">
+
+      <div class="key">
+        <div class="cap"><b>SPACE</b> <span>開始 / 停止</span></div>
+        <p>時間を数え始めます。止めても経過は消えず、再開すると続きから積み上がります。</p>
+      </div>
+
+      <div class="key">
+        <div class="cap"><b>ENTER</b> <span>完了</span></div>
+        <p>済ませて次の1件を出します。完了したものは消さずに残ります（やった量が見えるように）。</p>
+      </div>
+
+      <div class="key">
+        <div class="cap"><b>N</b> <span>追加</span></div>
+        <p>入力するのはタイトル1行だけ。何度もやることは「定番」に登録しておけば、次から1タップで出せます。</p>
+      </div>
+
+      <div class="key">
+        <div class="cap"><b>P</b> <span>やめる</span></div>
+        <p>気が乗らない1件を送ります。<strong class="mark">回数制限はありません。</strong>逃げ道は塞ぎません。送った分は画面右に「あとで」として残ります。</p>
+      </div>
+
+      <div class="key">
+        <div class="cap"><b>D</b> <span>分解</span></div>
+        <p>3つの問いに答えると、小さいタスクに割れます。子が全部済むと親も自動で済みます。</p>
+      </div>
+
+      <div class="key">
+        <div class="cap"><b>S</b> <span>眠い</span></div>
+        <p>面白い順に切り替えます。翌日には通常に戻ります。</p>
+      </div>
+
+    </div>
+    <p class="note">このほかに「今日」（T）で、その日に済ませた分と起床の記録を見られます。</p>
+  </section>
+
+  <section>
+    <h2 class="band display">あえて作らなかったもの</h2>
+    <p>要望が来ても入れないと決めているものです。どれも、着火ではなく<strong class="mark">管理作業</strong>を増やすか、罪悪感を生みます。</p>
+    <ul class="refused">
+      <li>優先度・重要度ソート</li>
+      <li>タグ・分類・フォルダ</li>
+      <li>絞り込み</li>
+      <li>1日の時間割</li>
+      <li>「今日は◯分やる」目標</li>
+      <li>連続日数</li>
+      <li>達成率グラフ</li>
+      <li>カレンダーの色分け</li>
+      <li>通知・催促</li>
+      <li>アカウント登録</li>
+      <li>設定画面</li>
+    </ul>
+    <p>機能を足すかどうかは、2つの問いで決めています。<strong>着火を助けるのか、管理作業を増やすのか。</strong>そして<strong>罪悪感を生まないか。</strong>どちらかに引っかかれば入れません。</p>
+    <p class="note">設定画面を持たないのは、設定をいじる時間が先延ばしの遊び場になるからです。</p>
+  </section>
+
+  <section>
+    <h2 class="band display">中身</h2>
+    <div class="stack">
+      <dl>
+        <div class="row"><dt>技術</dt><dd>Next.js（App Router）／ TypeScript ／ Tailwind CSS</dd></div>
+        <div class="row"><dt>保存先</dt><dd>使っている端末のブラウザの中だけ（localStorage）</dd></div>
+        <div class="row"><dt>外部送信</dt><dd>なし。サーバもデータベースもアカウントもありません</dd></div>
+        <div class="row"><dt>依存</dt><dd>next / react / react-dom の3つだけ</dd></div>
+        <div class="row"><dt>テスト</dt><dd>31件（タスク選択・保存・分解・完了の判定）</dd></div>
+        <div class="row"><dt>オフライン</dt><dd>アプリとして入れておけば、通信なしでも起動します</dd></div>
+      </dl>
+    </div>
+    <p class="note">入力したことは端末の外に出ません。個人的なやることを書く前提なので、そう作りました。かわりに、別の PC には引き継がれません。</p>
+  </section>
+
+  <section class="try">
+    <h2 class="display">触ってみる</h2>
+    <p>ブラウザで開くだけで使えます。登録も設定もありません。</p>
+    <a class="go mono" href="https://yaruzo-self.vercel.app" target="_blank" rel="noopener">
+      yaruzo-self.vercel.app <span class="arrow" aria-hidden="true">▶</span>
+    </a>
+    <ol class="steps">
+      <li>開くと、もうやることが1件出ています（何も入れていなければ「からっぽ。」と出ます）</li>
+      <li><code>N</code> でやることを1行入れる</li>
+      <li><code>SPACE</code> で時間を数え始める</li>
+      <li>終わったら <code>ENTER</code>。次の1件が出ます</li>
+      <li>気が乗らなければ <code>P</code>。何度押しても構いません</li>
+    </ol>
+  </section>
+
+  <footer>
+    <div>引用は出典が特定できるものだけを使っています（原典の章・著書・書簡まで確認。孫引きの引用サイトは使っていません）。</div>
+    <div>研究の引用は、設計の根拠として参照したものです。診断や治療に関する助言ではありません。</div>
+  </footer>
+
+</div>
+
+</body>
+</html>

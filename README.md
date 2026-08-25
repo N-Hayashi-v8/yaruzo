@@ -32,6 +32,7 @@ app/overlays.tsx    # 追加 / 分解 / 眠い / 今日
 lib/types.ts        # 型定義（データ形状の唯一の真実）
 lib/store.ts        # localStorage 読み書き 集約
 lib/select.ts       # 次タスク選択ロジック（通常 / 眠気）
+public/about.html   # 人に見せる用の説明ページ（/about）。素の HTML、直接編集する
 ```
 
 ## 状態
