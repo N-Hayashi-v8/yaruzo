@@ -289,6 +289,8 @@ export default function Home() {
     .filter((t) => todayKey(new Date(t.completedAt ?? 0)) === today)
     .sort((a, b) => (a.completedAt ?? 0) - (b.completedAt ?? 0));
   const log = logFor(store, today);
+  // P で送った札。未完了のものだけ。閉じれば消える（passed は永続化しない）
+  const passedTasks = store.tasks.filter((t) => passed.has(t.id) && t.completedAt === null);
   const total = estimateMin * 60;
   // 目安を超えたらバーが満ちて止まるだけ。超過を責めない（DESIGN.md 4章）
   const donePct = total > 0 ? Math.min(100, Math.round((elapsed / total) * 100)) : 0;
@@ -310,129 +312,151 @@ export default function Home() {
         </span>
       </header>
 
-      <main className="flex flex-1 flex-col justify-center gap-7 px-8 py-8 sm:px-12">
-        {task ? (
-          <>
-            <div className="flex flex-wrap items-center gap-2.5">
-              {/* 刺激度は出さない。入力手段が無くて全部おなじ値になるので、
-                  出しても情報が無い。眠気モードの並べ替えには裏で使う */}
-              {body && (
-                <span className="border-[3px] border-current bg-accent px-3 py-1 text-sm font-bold tracking-[0.08em] text-on-accent">
-                  身体タスク
-                </span>
-              )}
-              <EstimateGrip
-                min={task.estimateMin}
-                onMin={(min) => taskId && update((s) => setEstimate(s, taskId, min))}
-                fixed={body !== null}
-                className="border-[3px] border-current px-3 py-1 text-sm font-bold tracking-[0.08em]"
-              />
-            </div>
+      <div className="flex min-h-0 flex-1">
+        <main className="flex min-w-0 flex-1 flex-col justify-center gap-7 px-8 py-8 sm:px-12">
+          {task ? (
+            <>
+              <div className="flex flex-wrap items-center gap-2.5">
+                {/* 刺激度は出さない。入力手段が無くて全部おなじ値になるので、
+                    出しても情報が無い。眠気モードの並べ替えには裏で使う */}
+                {body && (
+                  <span className="border-[3px] border-current bg-accent px-3 py-1 text-sm font-bold tracking-[0.08em] text-on-accent">
+                    身体タスク
+                  </span>
+                )}
+                <EstimateGrip
+                  min={task.estimateMin}
+                  onMin={(min) => taskId && update((s) => setEstimate(s, taskId, min))}
+                  fixed={body !== null}
+                  className="border-[3px] border-current px-3 py-1 text-sm font-bold tracking-[0.08em]"
+                />
+              </div>
 
-            <h1 className="max-w-3xl font-display text-5xl leading-[1.08] tracking-tight text-pretty sm:text-7xl">
-              {task.title}
-            </h1>
+              <h1 className="max-w-3xl font-display text-5xl leading-[1.08] tracking-tight text-pretty sm:text-7xl">
+                {task.title}
+              </h1>
 
-            <div className="flex items-end gap-7">
-              <div
-                className={`-rotate-1 border-[5px] border-current px-7 pt-1.5 pb-2.5 shadow-[12px_12px_0_currentColor] ${
-                  running ? "bg-accent text-on-accent" : ""
-                }`}
-              >
+              <div className="flex items-end gap-7">
                 <div
-                  className="font-mono text-6xl leading-none font-black tabular-nums sm:text-8xl"
-                  aria-label={`経過 ${mmss(elapsed)}`}
+                  className={`-rotate-1 border-[5px] border-current px-7 pt-1.5 pb-2.5 shadow-[12px_12px_0_currentColor] ${
+                    running ? "bg-accent text-on-accent" : ""
+                  }`}
                 >
-                  {mmss(elapsed)}
+                  <div
+                    className="font-mono text-6xl leading-none font-black tabular-nums sm:text-8xl"
+                    aria-label={`経過 ${mmss(elapsed)}`}
+                  >
+                    {mmss(elapsed)}
+                  </div>
+                </div>
+                <div
+                  className="pb-4 text-[15px] font-bold tracking-[0.18em]"
+                  style={{ writingMode: "vertical-rl" }}
+                >
+                  {running ? "実行中" : "停止中"}
                 </div>
               </div>
-              <div
-                className="pb-4 text-[15px] font-bold tracking-[0.18em]"
-                style={{ writingMode: "vertical-rl" }}
-              >
-                {running ? "実行中" : "停止中"}
+
+              <div className="flex h-7 max-w-3xl border-4 border-current p-[3px]">
+                <div className="bg-current" style={{ width: `${donePct}%` }} />
               </div>
-            </div>
 
-            <div className="flex h-7 max-w-3xl border-4 border-current p-[3px]">
-              <div className="bg-current" style={{ width: `${donePct}%` }} />
-            </div>
-
-            <div className="flex flex-wrap items-center gap-5">
-              <button
-                onClick={toggle}
-                className="flex min-h-14 items-center gap-3 border-4 border-current px-6 py-3 text-lg font-bold shadow-[8px_8px_0_currentColor]"
-              >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" aria-hidden>
-                  {running ? (
-                    <path d="M6 4h4v16H6zM14 4h4v16h-4z" />
-                  ) : (
-                    <path d="M6 3l14 9-14 9z" />
-                  )}
-                </svg>
-                {running ? "一時停止" : "開始"}
-                <span className="border-2 border-current px-1.5 py-0.5 font-mono text-xs opacity-75">
-                  SPACE
-                </span>
-              </button>
-              <button
-                onClick={complete}
-                className="flex min-h-14 items-center gap-3 border-4 border-foreground bg-foreground px-6 py-3 text-lg font-bold text-background shadow-[8px_8px_0_var(--accent)]"
-              >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <path d="M4 13l6 6L21 5" />
-                </svg>
-                完了
-                <span className="border-2 border-current px-1.5 py-0.5 font-mono text-xs opacity-75">
-                  ENTER
-                </span>
-              </button>
-              {cheer && (
-                <span className="flex max-w-xl rotate-2 flex-col gap-1.5 bg-accent px-5 py-3 text-on-accent">
-                  <span className="font-display text-2xl leading-none">{cheer.word}</span>
-                  <span className="text-[13px] leading-snug font-bold">
-                    {cheer.quote.text}
-                    <span className="mt-0.5 block font-mono text-[11px] opacity-70">
-                      — {cheer.quote.by}
+              <div className="flex flex-wrap items-center gap-5">
+                <button
+                  onClick={toggle}
+                  className="flex min-h-14 items-center gap-3 border-4 border-current px-6 py-3 text-lg font-bold shadow-[8px_8px_0_currentColor]"
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" aria-hidden>
+                    {running ? (
+                      <path d="M6 4h4v16H6zM14 4h4v16h-4z" />
+                    ) : (
+                      <path d="M6 3l14 9-14 9z" />
+                    )}
+                  </svg>
+                  {running ? "一時停止" : "開始"}
+                  <span className="border-2 border-current px-1.5 py-0.5 font-mono text-xs opacity-75">
+                    SPACE
+                  </span>
+                </button>
+                <button
+                  onClick={complete}
+                  className="flex min-h-14 items-center gap-3 border-4 border-foreground bg-foreground px-6 py-3 text-lg font-bold text-background shadow-[8px_8px_0_var(--accent)]"
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M4 13l6 6L21 5" />
+                  </svg>
+                  完了
+                  <span className="border-2 border-current px-1.5 py-0.5 font-mono text-xs opacity-75">
+                    ENTER
+                  </span>
+                </button>
+                {cheer && (
+                  <span className="flex max-w-xl rotate-2 flex-col gap-1.5 bg-accent px-5 py-3 text-on-accent">
+                    <span className="font-display text-2xl leading-none">{cheer.word}</span>
+                    <span className="text-[13px] leading-snug font-bold">
+                      {cheer.quote.text}
+                      <span className="mt-0.5 block font-mono text-[11px] opacity-70">
+                        — {cheer.quote.by}
+                      </span>
                     </span>
                   </span>
-                </span>
-              )}
-            </div>
-          </>
-        ) : (
-          <>
-            <h1 className="font-display text-6xl leading-none tracking-tight sm:text-[7rem]">
-              からっぽ。
-            </h1>
-            <div className="flex items-center gap-5">
-              <span className="h-2.5 w-44 border-[3px] border-current bg-accent" />
-              <span className="text-lg font-bold">やること なし。それでいい。</span>
-            </div>
-            {/* 何もしていない状態を肯定する言葉だけ置く。ここで急かすと罪悪感になる */}
-            {/* 1 行に収めるために幅は制限しない（親いっぱい）。訳は削らない方針。
-                30px だと最長 46 字で 1380px 要るのでフル HD 未満だと折り返す。24px なら収まる */}
-            <blockquote className="border-l-[10px] border-foreground pl-5">
-              <p className="text-xl leading-snug font-black text-pretty sm:text-2xl">
-                {restQuote.text}
-              </p>
-              <footer className="mt-2 font-mono text-[13px] font-bold opacity-60">
-                — {restQuote.by}
-              </footer>
-            </blockquote>
-            <button
-              onClick={() => setOverlay("add")}
-              className="flex min-h-[68px] items-center gap-3.5 self-start border-[5px] border-foreground bg-accent px-7 py-3.5 text-2xl font-black text-on-accent shadow-[10px_10px_0_var(--color-foreground)] sm:text-3xl"
-            >
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" aria-hidden>
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-              追加する
-              <span className="border-2 border-current px-2 py-1 font-mono text-[13px]">N</span>
-            </button>
-          </>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <h1 className="font-display text-6xl leading-none tracking-tight sm:text-[7rem]">
+                からっぽ。
+              </h1>
+              <div className="flex items-center gap-5">
+                <span className="h-2.5 w-44 border-[3px] border-current bg-accent" />
+                <span className="text-lg font-bold">やること なし。それでいい。</span>
+              </div>
+              {/* 何もしていない状態を肯定する言葉だけ置く。ここで急かすと罪悪感になる */}
+              {/* 1 行に収めるために幅は制限しない（親いっぱい）。訳は削らない方針。
+                  30px だと最長 46 字で 1380px 要るのでフル HD 未満だと折り返す。24px なら収まる */}
+              <blockquote className="border-l-[10px] border-foreground pl-5">
+                <p className="text-xl leading-snug font-black text-pretty sm:text-2xl">
+                  {restQuote.text}
+                </p>
+                <footer className="mt-2 font-mono text-[13px] font-bold opacity-60">
+                  — {restQuote.by}
+                </footer>
+              </blockquote>
+              <button
+                onClick={() => setOverlay("add")}
+                className="flex min-h-[68px] items-center gap-3.5 self-start border-[5px] border-foreground bg-accent px-7 py-3.5 text-2xl font-black text-on-accent shadow-[10px_10px_0_var(--color-foreground)] sm:text-3xl"
+              >
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" aria-hidden>
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                追加する
+                <span className="border-2 border-current px-2 py-1 font-mono text-[13px]">N</span>
+              </button>
+            </>
+          )}
+        </main>
+
+        {/*
+          P で送った札だけ出す。未着手の一覧でも残数でもない = 全体量は見せない（DESIGN.md 3章）。
+          「消えてはいない」ことだけ渡す。押せないのは、選んで戻せると優先度を付ける操作になるから。
+          永続化しないので閉じれば消える（残すと「避けている一覧」になる。4章）。
+          狭い画面では出さない。NOW を細くするほうが害が大きい
+        */}
+        {passedTasks.length > 0 && (
+          <aside className="hidden w-60 flex-shrink-0 flex-col gap-3 overflow-y-auto border-l-4 border-foreground px-5 py-8 lg:flex">
+            <span className="font-mono text-xs font-bold tracking-[0.12em] opacity-55">あとで</span>
+            {passedTasks.map((t) => (
+              <span
+                key={t.id}
+                className="border-[3px] border-current px-3 py-2 text-[15px] leading-snug font-bold opacity-70"
+              >
+                {t.title}
+              </span>
+            ))}
+          </aside>
         )}
-      </main>
+      </div>
 
       {/* キーが押せない環境（スマホ）でも同じ操作ができるよう、ヒントはそのままボタン */}
       <footer className="flex min-h-[54px] flex-shrink-0 items-center gap-1 overflow-x-auto bg-foreground px-3 font-mono text-[13px] font-bold tracking-[0.06em] text-background sm:gap-2 sm:px-5">
