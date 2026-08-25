@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   addPreset,
   completeTask,
@@ -28,6 +28,7 @@ import { DONE_QUOTES, REST_QUOTES, pickQuote } from "@/lib/quotes";
 import type { Quote, Store, Task } from "@/lib/types";
 import {
   AddOverlay,
+  EstimateGrip,
   SleepyOverlay,
   SplitOverlay,
   TodayOverlay,
@@ -93,6 +94,8 @@ export default function Home() {
    * 永続化しない（閉じれば戻る）。残すと「避けている一覧」になって罪悪感を作る
    */
   const [passed, setPassed] = useState<ReadonlySet<string>>(new Set());
+  /** 追加画面で決めた目安分。入れたら既定に戻す（前のタスクの値を引きずらせない） */
+  const [draftMin, setDraftMin] = useState(15);
   const [cheer, setCheer] = useState<{ word: string; quote: Quote } | null>(null);
   /** からっぽ画面に出す言葉。からっぽに入るたび引き直す（下の shownTaskId のブロック） */
   const [restQuote, setRestQuote] = useState<Quote>(() => pickQuote(REST_QUOTES));
@@ -185,8 +188,9 @@ export default function Home() {
   const add = () => {
     const title = draft.trim();
     if (!title) return;
-    update((s) => ({ ...s, tasks: [...s.tasks, newTask(title)] }));
+    update((s) => ({ ...s, tasks: [...s.tasks, newTask(title, draftMin)] }));
     setDraft("");
+    setDraftMin(15);
     setOverlay(null);
   };
 
@@ -194,8 +198,9 @@ export default function Home() {
   const keep = () => {
     const title = draft.trim();
     if (!title) return;
-    update((s) => addPreset({ ...s, tasks: [...s.tasks, newTask(title)] }, title));
+    update((s) => addPreset({ ...s, tasks: [...s.tasks, newTask(title, draftMin)] }, title));
     setDraft("");
+    setDraftMin(15);
     setOverlay(null);
   };
 
@@ -231,38 +236,6 @@ export default function Home() {
     update((s) => splitTask(s, taskId, steps));
     setSteps(["", "", ""]);
     setOverlay(null);
-  };
-
-  /**
-   * 目安分はつまんで上下に動かして変える。上へ 8px で +5 分。
-   * 数字を打たせると管理作業が増える（DESIGN.md 7章）ので入力欄は置かない。
-   * 身体タスクは Store に無い固定値なので触らせない。
-   */
-  const grip = useRef<{ y: number; base: number } | null>(null);
-
-  const dragStart = (e: React.PointerEvent<HTMLElement>) => {
-    if (!taskId || body) return;
-    e.currentTarget.setPointerCapture(e.pointerId); // 枠の外まで引いても追える
-    grip.current = { y: e.clientY, base: estimateMin };
-  };
-
-  const dragMove = (e: React.PointerEvent<HTMLElement>) => {
-    const g = grip.current;
-    if (!g || !taskId) return;
-    update((s) => setEstimate(s, taskId, g.base + Math.round((g.y - e.clientY) / 8) * 5));
-  };
-
-  const dragEnd = () => {
-    grip.current = null;
-  };
-
-  /** マウスが無い/使えないとき用。上下キーで 5 分ずつ */
-  const nudge = (e: React.KeyboardEvent) => {
-    if (!taskId || body) return;
-    const d = e.key === "ArrowUp" ? 5 : e.key === "ArrowDown" ? -5 : 0;
-    if (d === 0) return;
-    e.preventDefault();
-    update((s) => setEstimate(s, taskId, estimateMin + d));
   };
 
   useEffect(() => {
@@ -348,24 +321,12 @@ export default function Home() {
                   身体タスク
                 </span>
               )}
-              <span
-                role="spinbutton"
-                aria-label="目安の分"
-                aria-valuenow={task.estimateMin}
-                aria-valuemin={5}
-                aria-valuemax={180}
-                tabIndex={body ? -1 : 0}
-                onPointerDown={dragStart}
-                onPointerMove={dragMove}
-                onPointerUp={dragEnd}
-                onPointerCancel={dragEnd}
-                onKeyDown={nudge}
-                className={`border-[3px] border-current px-3 py-1 text-sm font-bold tracking-[0.08em] ${
-                  body ? "" : "cursor-ns-resize touch-none select-none"
-                }`}
-              >
-                目安 {task.estimateMin}分{body ? "" : " ↕"}
-              </span>
+              <EstimateGrip
+                min={task.estimateMin}
+                onMin={(min) => taskId && update((s) => setEstimate(s, taskId, min))}
+                fixed={body !== null}
+                className="border-[3px] border-current px-3 py-1 text-sm font-bold tracking-[0.08em]"
+              />
             </div>
 
             <h1 className="max-w-3xl font-display text-5xl leading-[1.08] tracking-tight text-pretty sm:text-7xl">
@@ -478,7 +439,7 @@ export default function Home() {
         <HintButton keyLabel="SPACE" label="開始/停止" onClick={toggle} disabled={!task} />
         <HintButton keyLabel="ENTER" label="完了" onClick={complete} disabled={!task} />
         <HintButton keyLabel="N" label="追加" onClick={() => setOverlay("add")} />
-        <HintButton keyLabel="P" label="やめる" onClick={pass} disabled={!stored} />
+        <HintButton keyLabel="P" label="やめる" onClick={pass} disabled={!stored || body !== null} />
         <HintButton
           keyLabel="D"
           label="分解"
@@ -499,6 +460,8 @@ export default function Home() {
           onAdd={add}
           onKeep={keep}
           onClose={() => setOverlay(null)}
+          min={draftMin}
+          onMin={setDraftMin}
         />
       )}
 

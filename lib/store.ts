@@ -22,12 +22,18 @@ export function save(store: Store): void {
   localStorage.setItem(KEY, JSON.stringify(store));
 }
 
-/** 追加時の入力は title だけ。見積・刺激度は既定値（入力項目を増やさない） */
-export function newTask(title: string): Task {
+/** 目安分の丸め。5 分刻み・5〜180 分。画面のドラッグと store の両方で使う */
+export const clampMin = (min: number) => Math.min(180, Math.max(5, Math.round(min / 5) * 5));
+
+/**
+ * 追加時の入力は title だけ。刺激度は既定値（入力項目を増やさない）。
+ * 目安分は既定 15 分。追加画面でドラッグして変えたときだけ渡ってくる。
+ */
+export function newTask(title: string, estimateMin = 15): Task {
   return {
     id: crypto.randomUUID(),
     title,
-    estimateMin: 15,
+    estimateMin: clampMin(estimateMin),
     stimulation: 2,
     parentId: null,
     createdAt: Date.now(),
@@ -120,7 +126,7 @@ export function completeTask(store: Store, id: string, at: number = Date.now()):
  * 5 分刻み・5〜180 分に丸める。同じ値なら Store をそのまま返す（無駄な保存を挟まない）。
  */
 export function setEstimate(store: Store, id: string, min: number): Store {
-  const clamped = Math.min(180, Math.max(5, Math.round(min / 5) * 5));
+  const clamped = clampMin(min);
   const task = store.tasks.find((t) => t.id === id);
   if (!task || task.estimateMin === clamped) return store;
   return {

@@ -58,9 +58,11 @@ export function completedLeaves(tasks: Task[]): Task[] {
 
 /**
  * 「いったんやめた」分を除いた候補。
- * 全部やめていたら元のまま返す。逃げ道を塞いで画面をからっぽにしない。
+ * やめた結果 着手できるものが無くなったら元のまま返す。逃げ道を塞いで画面をからっぽにしない。
+ * 残数ではなく candidates で見る。完了済みは残り続けるので、
+ * 数だけ見ると「未完了はやめた 1 件だけ」でも 0 件と判定できずに からっぽ画面が出る。
  */
 export function withoutPassed(tasks: Task[], passed: ReadonlySet<string>): Task[] {
   const rest = tasks.filter((t) => !passed.has(t.id));
-  return rest.length > 0 ? rest : tasks;
+  return candidates(rest).length > 0 ? rest : tasks;
 }

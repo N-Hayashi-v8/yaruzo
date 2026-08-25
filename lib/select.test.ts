@@ -120,3 +120,15 @@ test("全部やめたら元のまま返す（詰ませない）", () => {
     ["a", "b"],
   );
 });
+
+test("やめた 1 件だけが未完了なら元のまま返す（完了済みを数に入れない）", () => {
+  const tasks = [
+    task({ id: "a", createdAt: 10 }),
+    task({ id: "b", createdAt: 20, completedAt: 30 }),
+  ];
+  // 完了済みの b が残るので「まだ候補がある」と誤判定していた
+  assert.deepEqual(
+    withoutPassed(tasks, new Set(["a"])).map((t) => t.id),
+    ["a", "b"],
+  );
+});

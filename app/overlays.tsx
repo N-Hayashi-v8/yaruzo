@@ -1,7 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 
+import { clampMin } from "@/lib/store";
 import type { Preset, Task } from "@/lib/types";
 
 /** 5 分の身体タスク。覚醒が落ちて刺激度の高いタスクが無いときに出す（DESIGN.md 3章） */
@@ -12,6 +13,61 @@ export const BODY_TASKS = [
 ] as const;
 
 export type BodyTask = (typeof BODY_TASKS)[number];
+
+/**
+ * 目安分のバッジ。つまんで上下に動かすと変わる（上へ 8px で +5 分）。
+ * マウスが無い/使えないときは上下キーでも同じ。数字の入力欄は置かない
+ * = 入力項目を増やして管理作業にしない（DESIGN.md 7章）。
+ * fixed = 変えられない場所（身体タスクは Store に無い固定値）。
+ */
+export function EstimateGrip({
+  min,
+  onMin,
+  fixed = false,
+  className = "",
+}: {
+  min: number;
+  onMin: (min: number) => void;
+  fixed?: boolean;
+  className?: string;
+}) {
+  const grip = useRef<{ y: number; base: number } | null>(null);
+  const release = () => {
+    grip.current = null;
+  };
+
+  return (
+    <span
+      role="spinbutton"
+      aria-label="目安の分"
+      aria-valuenow={min}
+      aria-valuemin={5}
+      aria-valuemax={180}
+      tabIndex={fixed ? -1 : 0}
+      onPointerDown={(e) => {
+        if (fixed) return;
+        e.currentTarget.setPointerCapture(e.pointerId); // 枠の外まで引いても追える
+        grip.current = { y: e.clientY, base: min };
+      }}
+      onPointerMove={(e) => {
+        const g = grip.current;
+        if (!g) return;
+        onMin(clampMin(g.base + Math.round((g.y - e.clientY) / 8) * 5));
+      }}
+      onPointerUp={release}
+      onPointerCancel={release}
+      onKeyDown={(e) => {
+        const d = e.key === "ArrowUp" ? 5 : e.key === "ArrowDown" ? -5 : 0;
+        if (fixed || d === 0) return;
+        e.preventDefault();
+        onMin(clampMin(min + d));
+      }}
+      className={`${className}${fixed ? "" : " cursor-ns-resize touch-none select-none"}`}
+    >
+      目安 {min}分{fixed ? "" : " ↕"}
+    </span>
+  );
+}
 
 function Overlay({ onClose, children }: { onClose: () => void; children: ReactNode }) {
   return (
@@ -58,6 +114,8 @@ export function AddOverlay({
   onAdd,
   onKeep,
   onClose,
+  min,
+  onMin,
 }: {
   draft: string;
   onDraft: (v: string) => void;
@@ -67,6 +125,8 @@ export function AddOverlay({
   onAdd: () => void;
   onKeep: () => void;
   onClose: () => void;
+  min: number;
+  onMin: (min: number) => void;
 }) {
   return (
     <Overlay onClose={onClose}>
@@ -134,9 +194,11 @@ export function AddOverlay({
         >
           定番にも入れる
         </button>
-        <span className="border-[3px] border-current px-3.5 py-1.5 text-[15px] font-bold opacity-60">
-          目安 15分
-        </span>
+        <EstimateGrip
+          min={min}
+          onMin={onMin}
+          className="border-[3px] border-current px-3.5 py-1.5 text-[15px] font-bold"
+        />
         <span className="font-mono text-[13px] font-bold opacity-60">ESC 閉じる</span>
       </div>
     </Overlay>
