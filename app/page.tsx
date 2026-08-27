@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 import {
   addPreset,
   completeTask,
@@ -46,6 +47,20 @@ const isThisMonth = (ts: number) => {
 
 /** 完了時の一言。毎回同じだと 2 日で効かなくなる（DESIGN.md 4章: 新規性減衰） */
 const CHEERS = ["よし", "済", "片付いた", "いいぞ", "1個 減った", "続けろ"];
+
+/**
+ * NOW の中身を差し替える。View Transitions で古い札と新しい札を繋ぐ（globals.css の view-transition-old/new）。
+ * flushSync が要るのは、React が state 更新を後回しにすると
+ * 「差し替え後」のスナップショットが撮れず、何も動かないから。
+ * 未対応のブラウザではそのまま差し替える（動かないだけで結果は同じ）
+ */
+const swap = (fn: () => void) => {
+  if (typeof document === "undefined" || !document.startViewTransition) {
+    fn();
+    return;
+  }
+  document.startViewTransition(() => flushSync(fn));
+};
 
 type OverlayName = "add" | "split" | "sleepy" | "today";
 
@@ -173,16 +188,18 @@ export default function Home() {
 
   const complete = () => {
     if (!taskId) return;
-    setCheer({
-      word: CHEERS[Math.floor(Math.random() * CHEERS.length)],
-      quote: pickQuote(DONE_QUOTES),
+    swap(() => {
+      setCheer({
+        word: CHEERS[Math.floor(Math.random() * CHEERS.length)],
+        quote: pickQuote(DONE_QUOTES),
+      });
+      if (body) {
+        setBody(null); // 身体タスクは記録に残さない
+        return;
+      }
+      const next = update((s) => completeTask(s, taskId));
+      if (next) setPickedId(nextTask(live(next.tasks), sleepy)?.id ?? null); // 済んだので次を引く
     });
-    if (body) {
-      setBody(null); // 身体タスクは記録に残さない
-      return;
-    }
-    const next = update((s) => completeTask(s, taskId));
-    if (next) setPickedId(nextTask(live(next.tasks), sleepy)?.id ?? null); // 済んだので次を引く
   };
 
   const add = () => {
@@ -221,13 +238,15 @@ export default function Home() {
       store.tasks.filter((t) => !next.has(t.id)),
       sleepy,
     );
-    if (pick) {
-      setPassed(next);
-      setPickedId(pick.id);
-    } else {
-      setPassed(new Set());
-      setPickedId(nextTask(store.tasks, sleepy)?.id ?? null);
-    }
+    swap(() => {
+      if (pick) {
+        setPassed(next);
+        setPickedId(pick.id);
+      } else {
+        setPassed(new Set());
+        setPickedId(nextTask(store.tasks, sleepy)?.id ?? null);
+      }
+    });
   };
 
   const split = () => {
@@ -313,7 +332,12 @@ export default function Home() {
       </header>
 
       <div className="flex min-h-0 flex-1">
-        <main className="flex min-w-0 flex-1 flex-col justify-center gap-7 px-8 py-8 sm:px-12">
+        {/* view-transition-name を main だけに付ける。差し替わるのはここの中身だけで、
+            ヘッダ・フッタは静止させる（swap() と globals.css） */}
+        <main
+          style={{ viewTransitionName: "now" }}
+          className="flex min-w-0 flex-1 flex-col justify-center gap-7 px-8 py-8 sm:px-12"
+        >
           {task ? (
             <>
               <div className="flex flex-wrap items-center gap-2.5">
@@ -391,7 +415,7 @@ export default function Home() {
                   </span>
                 </button>
                 {cheer && (
-                  <span className="flex max-w-xl rotate-2 flex-col gap-1.5 bg-accent px-5 py-3 text-on-accent">
+                  <span className="anim-pop flex max-w-xl rotate-2 flex-col gap-1.5 bg-accent px-5 py-3 text-on-accent">
                     <span className="font-display text-2xl leading-none">{cheer.word}</span>
                     <span className="text-[13px] leading-snug font-bold">
                       {cheer.quote.text}

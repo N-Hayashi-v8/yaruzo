@@ -44,3 +44,57 @@ button:not(:disabled):active {
   transform: translate(3px, 3px);
   box-shadow: none;
 }
+
+/* ---- 画面の切り替え ----
+   着火を鈍らせないので長くしない。どれも 200ms 以内。
+   「押した瞬間に出す」の例外は "入れ替わり" だけ。押下感（上の :active）には付けない */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+}
+
+.anim-rise {
+  animation: rise 160ms ease-out;
+}
+.anim-fade {
+  animation: fade 140ms ease-out;
+}
+/* 完了の一言。跳ねて出す（overshoot するイージング） */
+.anim-pop {
+  animation: pop 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/*
+  NOW の入れ替え（View Transitions API）。名前を main だけに付けるので、
+  ヘッダ・フッタは静止したまま中身が差し替わる。root 全体を動かすと画面ごと揺れる
+*/
+::view-transition-old(now) {
+  animation: fade 120ms ease-in reverse both;
+}
+::view-transition-new(now) {
+  animation: rise 190ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-rise,
+  .anim-fade,
+  .anim-pop,
+  ::view-transition-old(now),
+  ::view-transition-new(now) {
+    animation: none;
+  }
+}

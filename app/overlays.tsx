@@ -72,12 +72,13 @@ export function EstimateGrip({
 function Overlay({ onClose, children }: { onClose: () => void; children: ReactNode }) {
   return (
     <div
-      className="fixed inset-0 flex items-start justify-center overflow-y-auto bg-[rgba(22,19,15,0.74)] p-4 pt-16 sm:p-6 sm:pt-24"
+      className="anim-fade fixed inset-0 flex items-start justify-center overflow-y-auto bg-[rgba(22,19,15,0.74)] p-4 pt-16 sm:p-6 sm:pt-24"
       onClick={onClose}
     >
+      {/* 出るときだけ動かす。閉じるのは作業に戻る瞬間なので即消す（globals.css） */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="flex w-full max-w-4xl flex-col gap-5 border-[6px] border-foreground bg-background p-6 shadow-[16px_16px_0_var(--accent)] sm:p-8"
+        className="anim-rise flex w-full max-w-4xl flex-col gap-5 border-[6px] border-foreground bg-background p-6 shadow-[16px_16px_0_var(--accent)] sm:p-8"
       >
         {children}
       </div>
