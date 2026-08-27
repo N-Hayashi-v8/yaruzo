@@ -63,10 +63,12 @@ button:not(:disabled):active {
   from {
     opacity: 0;
     transform: perspective(1000px) rotateX(-78deg) scaleY(0.55);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.35, 1); /* 開く = 一気に */
   }
   60% {
     opacity: 1;
     transform: perspective(1000px) rotateX(6deg) scaleY(1);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.3, 1); /* 開ききって止まる */
   }
 }
 @keyframes fade {
@@ -82,9 +84,10 @@ button:not(:disabled):active {
   }
 }
 
+/* 緩急は keyframes 側で区間ごとに決めている。ここは duration だけ */
 .anim-unfold {
   transform-origin: top center;
-  animation: unfold 260ms cubic-bezier(0.22, 1.1, 0.4, 1);
+  animation: unfold 260ms linear;
 }
 .anim-fade {
   animation: fade 140ms ease-out;
@@ -97,18 +100,27 @@ button:not(:disabled):active {
    name は <main> だけに付いている。ヘッダ・フッタは静止して中身だけ差し替わる。
    種類は swap() が html[data-vt] に立てる（app/page.tsx） */
 
+/*
+  イージングは **キーフレームごとに掛かり直す**。中間フレームに何も書かないと
+  区間の境目で毎回「加速 → 減速」が入り、60fps 出ていても動きが折れて見える。
+  区間ごとに何をしているかで指定する（揉む = linear、放る = 加速、着地 = 減速）
+*/
+
 /* 新しい札が上から降って貼り付く。行き過ぎてから戻る */
 @keyframes slam {
   0% {
     opacity: 0;
     transform: translateY(-44px) scale(1.12) rotate(-1.6deg);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.85, 0.45); /* 落ちる = 加速 */
   }
   55% {
     opacity: 1;
     transform: translateY(0) scale(0.975) rotate(0.5deg);
+    animation-timing-function: cubic-bezier(0.3, 0, 0.4, 1);
   }
   78% {
     transform: scale(1.015) rotate(-0.3deg);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.3, 1); /* 収まる = 減速 */
   }
   100% {
     transform: none;
@@ -117,14 +129,20 @@ button:not(:disabled):active {
 
 /* 揉んで丸めて、右上（今月カウンタ）へ放る */
 @keyframes crumple {
+  0% {
+    animation-timing-function: linear; /* 揉む区間は等速。ここに緩急を入れると折れる */
+  }
   20% {
     transform: scale(0.9) rotate(-5deg) skewX(6deg);
+    animation-timing-function: linear;
   }
   36% {
     transform: scale(0.74) rotate(8deg) skewX(-9deg);
+    animation-timing-function: linear;
   }
   52% {
     transform: scale(0.55) rotate(-13deg) skewY(8deg);
+    animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.5); /* ここから放る = 加速 */
   }
   100% {
     opacity: 0;
@@ -132,10 +150,16 @@ button:not(:disabled):active {
   }
 }
 
-/* 回しながら小さくして放る */
-@keyframes spin {
+/* 回しながら小さくして放る。
+   名前を spin にすると Tailwind 組み込みの @keyframes spin（animate-spin 用）に
+   丸ごと上書きされ、その場で 1 回転するだけの別物になる。当てない名前を使う */
+@keyframes toss {
+  0% {
+    animation-timing-function: linear;
+  }
   30% {
     transform: scale(0.82) rotate(22deg);
+    animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.5);
   }
   100% {
     opacity: 0;
@@ -145,8 +169,12 @@ button:not(:disabled):active {
 
 /* 縦にひっくり返しながら放る */
 @keyframes flip {
+  0% {
+    animation-timing-function: linear;
+  }
   35% {
     transform: perspective(1200px) rotateY(58deg) scale(0.8);
+    animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.5);
   }
   100% {
     opacity: 0;
@@ -183,22 +211,23 @@ button:not(:disabled):active {
 ::view-transition-old(now) {
   animation: fade 120ms ease-in reverse both;
 }
+/* 緩急は keyframes 側で区間ごとに決めている。ここは duration だけ */
 ::view-transition-new(now) {
-  animation: slam 300ms cubic-bezier(0.22, 1.1, 0.4, 1) both;
+  animation: slam 300ms linear both;
 }
 
 html[data-vt="crumple"]::view-transition-old(now) {
-  animation: crumple 520ms cubic-bezier(0.5, 0, 0.75, 0.45) both;
+  animation: crumple 520ms linear both;
 }
-html[data-vt="spin"]::view-transition-old(now) {
-  animation: spin 460ms cubic-bezier(0.5, 0, 0.75, 0.45) both;
+html[data-vt="toss"]::view-transition-old(now) {
+  animation: toss 460ms linear both;
 }
 html[data-vt="flip"]::view-transition-old(now) {
-  animation: flip 500ms cubic-bezier(0.5, 0, 0.75, 0.45) both;
+  animation: flip 500ms linear both;
 }
 /* 古い札が飛び出してから次を貼る。全部同時だとどっちも読めない */
 html[data-vt="crumple"]::view-transition-new(now),
-html[data-vt="spin"]::view-transition-new(now),
+html[data-vt="toss"]::view-transition-new(now),
 html[data-vt="flip"]::view-transition-new(now) {
   animation-delay: 90ms;
 }
@@ -214,9 +243,11 @@ html[data-vt="pass"]::view-transition-new(now) {
 @keyframes catch {
   0% {
     transform: scale(1);
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.3, 1); /* 受け止める = 一気に膨らむ */
   }
   40% {
     transform: scale(1.32);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.3, 1); /* 戻る = 減速 */
   }
   100% {
     transform: scale(1);
@@ -224,7 +255,7 @@ html[data-vt="pass"]::view-transition-new(now) {
 }
 .anim-catch {
   display: inline-block;
-  animation: catch 420ms cubic-bezier(0.34, 1.56, 0.64, 1) 260ms both;
+  animation: catch 420ms linear 260ms both;
 }
 
 /*

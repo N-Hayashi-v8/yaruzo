@@ -64,15 +64,59 @@ const swap = (kind: "add" | "pass" | DoneMotion, fn: () => void) => {
   const clear = () => {
     delete root.dataset.vt;
   };
+  probe(kind);
   // finished は途中で打ち切られると reject する。成功も失敗も同じ後始末
-  document.startViewTransition(() => flushSync(fn)).finished.then(clear, clear);
+  document
+    .startViewTransition(() => {
+      const t = performance.now();
+      flushSync(fn);
+      if (probing()) console.log(`[vt:${kind}] 差し替え ${(performance.now() - t).toFixed(1)}ms`);
+    })
+    .finished.then(clear, clear);
 };
+
+/* ------------------------------------------------------------------
+   動きのカクつきを切り分けるための一時コード。原因が分かったら消す。
+   ?probe=1 を付けて開いたときだけ動く（yaruzo.bat の本番ビルドでも測れる）
+   ------------------------------------------------------------------ */
+
+const probing = () =>
+  typeof window !== "undefined" && window.location.search.includes("probe");
+
+/** 動いている間のフレーム間隔。fps が出ているのに滑らかでないのか、本当に落ちているのかを分ける */
+function probe(kind: string) {
+  if (!probing()) return;
+  const t0 = performance.now();
+  let last = t0;
+  let frames = 0;
+  let worst = 0;
+  let worstAt = 0;
+  const tick = (now: number) => {
+    const gap = now - last;
+    last = now;
+    frames += 1;
+    if (gap > worst) {
+      worst = gap;
+      worstAt = now - t0;
+    }
+    if (now - t0 < 900) {
+      requestAnimationFrame(tick);
+      return;
+    }
+    const ms = now - t0;
+    console.log(
+      `[vt:${kind}] ${frames}フレーム / ${Math.round(ms)}ms → 平均 ${Math.round(frames / (ms / 1000))}fps` +
+        ` / 最悪フレーム ${worst.toFixed(1)}ms (開始 ${Math.round(worstAt)}ms 地点)`,
+    );
+  };
+  requestAnimationFrame(tick);
+}
 
 /**
  * 完了したときの札の飛び方。毎回引く。
  * 1 種だと 2 日で見飽きる（DESIGN.md 4章 新規性減衰）。言葉だけ変えても動きが同じなら同じこと
  */
-const DONE_MOTIONS = ["crumple", "spin", "flip"] as const;
+const DONE_MOTIONS = ["crumple", "toss", "flip"] as const;
 type DoneMotion = (typeof DONE_MOTIONS)[number];
 
 type OverlayName = "add" | "split" | "sleepy" | "today";
@@ -351,7 +395,7 @@ export default function Home() {
             眠気モード
           </span>
         )}
-        {/* 完了した札はここへ飛んでくる（globals.css の crumple/spin/flip）。
+        {/* 完了した札はここへ飛んでくる（globals.css の crumple/toss/flip）。
             受け取った側が跳ねないと、どこへ行ったのか分からない。
             key を数字にしてあるので、増えたときだけ animation が焼き直される */}
         <span className="font-mono text-[17px] font-bold tracking-[0.06em]">
