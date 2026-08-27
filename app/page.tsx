@@ -55,43 +55,64 @@ const CHEERS = ["よし", "済", "片付いた", "いいぞ", "1個 減った", 
  * 未対応のブラウザではそのまま差し替える（動かないだけで結果は同じ）
  */
 const swap = (kind: "add" | "pass" | DoneMotion, fn: () => void) => {
-  if (typeof document === "undefined" || !document.startViewTransition) {
+  // 動いている最中に次を始めると、前の動きが打ち切られて瞬間的に飛ぶ。
+  // P の連打はふつうの使い方なので、そのときは動きを諦めてそのまま差し替える
+  if (typeof document === "undefined" || !document.startViewTransition || vtRunning) {
     fn();
     return;
   }
+  vtRunning = true;
   const root = document.documentElement;
   root.dataset.vt = kind; // CSS 側の分岐。globals.css の html[data-vt=...]
-  const clear = () => {
+  const stop = probe(kind);
+  const done = () => {
     delete root.dataset.vt;
+    vtRunning = false;
+    stop();
   };
-  probe(kind);
   // finished は途中で打ち切られると reject する。成功も失敗も同じ後始末
-  document
-    .startViewTransition(() => {
-      const t = performance.now();
-      flushSync(fn);
-      if (probing()) console.log(`[vt:${kind}] 差し替え ${(performance.now() - t).toFixed(1)}ms`);
-    })
-    .finished.then(clear, clear);
+  document.startViewTransition(() => flushSync(fn)).finished.then(done, done);
 };
+
+let vtRunning = false;
 
 /* ------------------------------------------------------------------
    動きのカクつきを切り分けるための一時コード。原因が分かったら消す。
-   ?probe=1 を付けて開いたときだけ動く（yaruzo.bat の本番ビルドでも測れる）
+   ?probe=1 を付けて開いたときだけ動く（yaruzo.bat の本番ビルドでも測れる）。
+
+   数字は画面の右下に出す。console に出すと開発者ツールを開くことになり、
+   それ自体が数フレーム食って測りたいものが測れない。
+   窓は「動いている間」だけ。静止中まで数えると平均が薄まる
    ------------------------------------------------------------------ */
 
 const probing = () =>
   typeof window !== "undefined" && window.location.search.includes("probe");
 
-/** 動いている間のフレーム間隔。fps が出ているのに滑らかでないのか、本当に落ちているのかを分ける */
-function probe(kind: string) {
-  if (!probing()) return;
+/** 素の DOM に直接書く。React の state にすると再レンダリングが計測を汚す */
+function show(line: string) {
+  let el = document.getElementById("probe-out");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "probe-out";
+    el.style.cssText =
+      "position:fixed;right:8px;bottom:62px;z-index:99;padding:8px 10px;" +
+      "background:#000;color:#7CFC00;font:11px/1.6 monospace;white-space:pre;pointer-events:none";
+    document.body.appendChild(el);
+  }
+  el.textContent = `${line}\n${el.textContent ?? ""}`.split("\n").slice(0, 8).join("\n");
+}
+
+/** 動いている間のフレーム間隔。戻り値を呼ぶと止まって結果を出す */
+function probe(kind: string): () => void {
+  if (!probing()) return () => {};
   const t0 = performance.now();
   let last = t0;
   let frames = 0;
   let worst = 0;
   let worstAt = 0;
+  let alive = true;
   const tick = (now: number) => {
+    if (!alive) return;
     const gap = now - last;
     last = now;
     frames += 1;
@@ -99,17 +120,17 @@ function probe(kind: string) {
       worst = gap;
       worstAt = now - t0;
     }
-    if (now - t0 < 900) {
-      requestAnimationFrame(tick);
-      return;
-    }
-    const ms = now - t0;
-    console.log(
-      `[vt:${kind}] ${frames}フレーム / ${Math.round(ms)}ms → 平均 ${Math.round(frames / (ms / 1000))}fps` +
-        ` / 最悪フレーム ${worst.toFixed(1)}ms (開始 ${Math.round(worstAt)}ms 地点)`,
-    );
+    requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
+  return () => {
+    alive = false;
+    const ms = performance.now() - t0;
+    show(
+      `${kind.padEnd(8)} ${Math.round(ms)}ms ${frames}f ` +
+        `平均${Math.round(frames / (ms / 1000))}fps 最悪${worst.toFixed(0)}ms@${Math.round(worstAt)}ms`,
+    );
+  };
 }
 
 /**
