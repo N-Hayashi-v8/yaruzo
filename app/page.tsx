@@ -54,13 +54,26 @@ const CHEERS = ["よし", "済", "片付いた", "いいぞ", "1個 減った", 
  * 「差し替え後」のスナップショットが撮れず、何も動かないから。
  * 未対応のブラウザではそのまま差し替える（動かないだけで結果は同じ）
  */
-const swap = (fn: () => void) => {
+const swap = (kind: "add" | "pass" | DoneMotion, fn: () => void) => {
   if (typeof document === "undefined" || !document.startViewTransition) {
     fn();
     return;
   }
-  document.startViewTransition(() => flushSync(fn));
+  const root = document.documentElement;
+  root.dataset.vt = kind; // CSS 側の分岐。globals.css の html[data-vt=...]
+  const clear = () => {
+    delete root.dataset.vt;
+  };
+  // finished は途中で打ち切られると reject する。成功も失敗も同じ後始末
+  document.startViewTransition(() => flushSync(fn)).finished.then(clear, clear);
 };
+
+/**
+ * 完了したときの札の飛び方。毎回引く。
+ * 1 種だと 2 日で見飽きる（DESIGN.md 4章 新規性減衰）。言葉だけ変えても動きが同じなら同じこと
+ */
+const DONE_MOTIONS = ["crumple", "spin", "flip"] as const;
+type DoneMotion = (typeof DONE_MOTIONS)[number];
 
 type OverlayName = "add" | "split" | "sleepy" | "today";
 
@@ -188,7 +201,7 @@ export default function Home() {
 
   const complete = () => {
     if (!taskId) return;
-    swap(() => {
+    swap(DONE_MOTIONS[Math.floor(Math.random() * DONE_MOTIONS.length)], () => {
       setCheer({
         word: CHEERS[Math.floor(Math.random() * CHEERS.length)],
         quote: pickQuote(DONE_QUOTES),
@@ -202,29 +215,41 @@ export default function Home() {
     });
   };
 
+  /**
+   * 追加系の後始末。からっぽに 1 枚目が入るときだけ札が貼り付く動きを出す。
+   * 既に札が出ているときは追加しても NOW は変わらない = 動かすと同じ絵が揺れるだけ
+   */
+  const addSwap = (fn: () => void) => (task ? fn() : swap("add", fn));
+
   const add = () => {
     const title = draft.trim();
     if (!title) return;
-    update((s) => ({ ...s, tasks: [...s.tasks, newTask(title, draftMin)] }));
-    setDraft("");
-    setDraftMin(15);
-    setOverlay(null);
+    addSwap(() => {
+      update((s) => ({ ...s, tasks: [...s.tasks, newTask(title, draftMin)] }));
+      setDraft("");
+      setDraftMin(15);
+      setOverlay(null);
+    });
   };
 
   /** 入れると同時に定番へ残す。次からは 1 タップで生える */
   const keep = () => {
     const title = draft.trim();
     if (!title) return;
-    update((s) => addPreset({ ...s, tasks: [...s.tasks, newTask(title, draftMin)] }, title));
-    setDraft("");
-    setDraftMin(15);
-    setOverlay(null);
+    addSwap(() => {
+      update((s) => addPreset({ ...s, tasks: [...s.tasks, newTask(title, draftMin)] }, title));
+      setDraft("");
+      setDraftMin(15);
+      setOverlay(null);
+    });
   };
 
   /** 定番を 1 タップで生やす */
   const spawn = (id: string) => {
-    update((s) => spawnFromPreset(s, id));
-    setOverlay(null);
+    addSwap(() => {
+      update((s) => spawnFromPreset(s, id));
+      setOverlay(null);
+    });
   };
 
   /**
@@ -238,7 +263,7 @@ export default function Home() {
       store.tasks.filter((t) => !next.has(t.id)),
       sleepy,
     );
-    swap(() => {
+    swap("pass", () => {
       if (pick) {
         setPassed(next);
         setPickedId(pick.id);
@@ -326,8 +351,14 @@ export default function Home() {
             眠気モード
           </span>
         )}
+        {/* 完了した札はここへ飛んでくる（globals.css の crumple/spin/flip）。
+            受け取った側が跳ねないと、どこへ行ったのか分からない。
+            key を数字にしてあるので、増えたときだけ animation が焼き直される */}
         <span className="font-mono text-[17px] font-bold tracking-[0.06em]">
-          今月 {monthCount}
+          今月{" "}
+          <span key={monthCount} className={cheer ? "anim-catch" : ""}>
+            {monthCount}
+          </span>
         </span>
       </header>
 

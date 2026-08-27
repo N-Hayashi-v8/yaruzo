@@ -78,7 +78,7 @@ function Overlay({ onClose, children }: { onClose: () => void; children: ReactNo
       {/* 出るときだけ動かす。閉じるのは作業に戻る瞬間なので即消す（globals.css） */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="anim-rise flex w-full max-w-4xl flex-col gap-5 border-[6px] border-foreground bg-background p-6 shadow-[16px_16px_0_var(--accent)] sm:p-8"
+        className="anim-unfold flex w-full max-w-4xl flex-col gap-5 border-[6px] border-foreground bg-background p-6 shadow-[16px_16px_0_var(--accent)] sm:p-8"
       >
         {children}
       </div>

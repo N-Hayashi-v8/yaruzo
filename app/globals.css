@@ -45,14 +45,28 @@ button:not(:disabled):active {
   box-shadow: none;
 }
 
-/* ---- 画面の切り替え ----
-   着火を鈍らせないので長くしない。どれも 200ms 以内。
-   「押した瞬間に出す」の例外は "入れ替わり" だけ。押下感（上の :active）には付けない */
+/* ============================================================
+   画面の切り替え
 
-@keyframes rise {
+   操作を待たせる動きは付けない（押下感の :active に transition が無いのと同じ理由）。
+   動かすのは「入れ替わり」だけ。開始と同時に次の操作は受け付けている
+     - 出るとき  … 160〜260ms。ここを長くすると着火が鈍る
+     - 消えるとき … 長くてよい。もう終わった札で、次の札は先に出ている
+
+   完了の動きは 3 種から毎回引く。1 種だと 2 日で飽きる（DESIGN.md 4章 新規性減衰）。
+   ============================================================ */
+
+/* --- 部品ごとの動き --- */
+
+/* 折り畳んだ紙を開く。追加オーバーレイ。origin が上端なので手前に開いてくる */
+@keyframes unfold {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: perspective(1000px) rotateX(-78deg) scaleY(0.55);
+  }
+  60% {
+    opacity: 1;
+    transform: perspective(1000px) rotateX(6deg) scaleY(1);
   }
 }
 @keyframes fade {
@@ -60,6 +74,7 @@ button:not(:disabled):active {
     opacity: 0;
   }
 }
+/* 完了の一言。跳ねて出す */
 @keyframes pop {
   from {
     opacity: 0;
@@ -67,34 +82,158 @@ button:not(:disabled):active {
   }
 }
 
-.anim-rise {
-  animation: rise 160ms ease-out;
+.anim-unfold {
+  transform-origin: top center;
+  animation: unfold 260ms cubic-bezier(0.22, 1.1, 0.4, 1);
 }
 .anim-fade {
   animation: fade 140ms ease-out;
 }
-/* 完了の一言。跳ねて出す（overshoot するイージング） */
 .anim-pop {
   animation: pop 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* --- NOW の入れ替え（View Transitions API）---
+   name は <main> だけに付いている。ヘッダ・フッタは静止して中身だけ差し替わる。
+   種類は swap() が html[data-vt] に立てる（app/page.tsx） */
+
+/* 新しい札が上から降って貼り付く。行き過ぎてから戻る */
+@keyframes slam {
+  0% {
+    opacity: 0;
+    transform: translateY(-44px) scale(1.12) rotate(-1.6deg);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(0) scale(0.975) rotate(0.5deg);
+  }
+  78% {
+    transform: scale(1.015) rotate(-0.3deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+/* 揉んで丸めて、右上（今月カウンタ）へ放る */
+@keyframes crumple {
+  20% {
+    transform: scale(0.9) rotate(-5deg) skewX(6deg);
+  }
+  36% {
+    transform: scale(0.74) rotate(8deg) skewX(-9deg);
+  }
+  52% {
+    transform: scale(0.55) rotate(-13deg) skewY(8deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(44vw, -52vh) scale(0.04) rotate(160deg);
+  }
+}
+
+/* 回しながら小さくして放る */
+@keyframes spin {
+  30% {
+    transform: scale(0.82) rotate(22deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(44vw, -52vh) scale(0.05) rotate(400deg);
+  }
+}
+
+/* 縦にひっくり返しながら放る */
+@keyframes flip {
+  35% {
+    transform: perspective(1200px) rotateY(58deg) scale(0.8);
+  }
+  100% {
+    opacity: 0;
+    transform: perspective(1200px) translate(44vw, -52vh) rotateY(320deg) scale(0.05);
+  }
+}
+
+/* やめる。横へ払って、次を反対側から出す */
+@keyframes swipe-out {
+  to {
+    opacity: 0;
+    transform: translateX(-32%) rotate(-4deg);
+  }
+}
+@keyframes swipe-in {
+  from {
+    opacity: 0;
+    transform: translateX(24%) rotate(3deg);
+  }
+}
+
 /*
-  NOW の入れ替え（View Transitions API）。名前を main だけに付けるので、
-  ヘッダ・フッタは静止したまま中身が差し替わる。root 全体を動かすと画面ごと揺れる
+  root 側（ヘッダ・フッタ・開いているオーバーレイ）は動かさない。
+  既定のクロスフェードが掛かると、閉じたオーバーレイが薄れながら残る
 */
+::view-transition-old(root) {
+  display: none;
+}
+::view-transition-new(root) {
+  animation: none;
+}
+
+/* 既定（= 追加。data-vt が無いときもここ）。上から降ってきて貼り付く */
 ::view-transition-old(now) {
   animation: fade 120ms ease-in reverse both;
 }
 ::view-transition-new(now) {
-  animation: rise 190ms ease-out both;
+  animation: slam 300ms cubic-bezier(0.22, 1.1, 0.4, 1) both;
+}
+
+html[data-vt="crumple"]::view-transition-old(now) {
+  animation: crumple 520ms cubic-bezier(0.5, 0, 0.75, 0.45) both;
+}
+html[data-vt="spin"]::view-transition-old(now) {
+  animation: spin 460ms cubic-bezier(0.5, 0, 0.75, 0.45) both;
+}
+html[data-vt="flip"]::view-transition-old(now) {
+  animation: flip 500ms cubic-bezier(0.5, 0, 0.75, 0.45) both;
+}
+/* 古い札が飛び出してから次を貼る。全部同時だとどっちも読めない */
+html[data-vt="crumple"]::view-transition-new(now),
+html[data-vt="spin"]::view-transition-new(now),
+html[data-vt="flip"]::view-transition-new(now) {
+  animation-delay: 90ms;
+}
+
+html[data-vt="pass"]::view-transition-old(now) {
+  animation: swipe-out 200ms ease-in both;
+}
+html[data-vt="pass"]::view-transition-new(now) {
+  animation: swipe-in 220ms cubic-bezier(0.22, 1, 0.4, 1) both;
+}
+
+/* 飛んでいった先。受け取った側を跳ねさせないと、どこへ行ったか分からない */
+@keyframes catch {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.32);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.anim-catch {
+  display: inline-block;
+  animation: catch 420ms cubic-bezier(0.34, 1.56, 0.64, 1) 260ms both;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .anim-rise,
+  .anim-unfold,
   .anim-fade,
   .anim-pop,
+  .anim-catch,
   ::view-transition-old(now),
   ::view-transition-new(now) {
-    animation: none;
+    animation: none !important;
   }
 }
