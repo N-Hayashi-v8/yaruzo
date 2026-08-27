@@ -416,7 +416,7 @@ export default function Home() {
                 <div className="bg-current" style={{ width: `${donePct}%` }} />
               </div>
 
-              <div className="flex flex-wrap items-center gap-5">
+              <div className="relative flex flex-wrap items-center gap-5">
                 <button
                   onClick={toggle}
                   className="flex min-h-14 items-center gap-3 border-4 border-current px-6 py-3 text-lg font-bold shadow-[8px_8px_0_currentColor]"
@@ -445,8 +445,12 @@ export default function Home() {
                     ENTER
                   </span>
                 </button>
+                {/*
+                  レイアウトから外して浮かせる。行の中に置くと、出るときと 3.6 秒後に消えるときの
+                  2 回、行の高さが変わって画面全体がガクッと動く（main は justify-center）
+                */}
                 {cheer && (
-                  <span className="anim-pop flex max-w-xl rotate-2 flex-col gap-1.5 bg-accent px-5 py-3 text-on-accent">
+                  <span className="anim-pop absolute top-full left-0 z-10 mt-4 flex max-w-xl rotate-2 flex-col gap-1.5 bg-accent px-5 py-3 text-on-accent">
                     <span className="font-display text-2xl leading-none">{cheer.word}</span>
                     <span className="text-[13px] leading-snug font-bold">
                       {cheer.quote.text}
