@@ -23,6 +23,27 @@ export type Preset = {
   lastUsedAt: number;
 };
 
+/**
+ * 今日の約束。会議・通院・締切のような **外から来て動かせない** 予定。
+ *
+ * タスクではない。時間割でもない（DESIGN.md 1章・7章）。
+ * 自分で時間を割り振ったものは未達を生むが、これは「来る」もので達成対象ではない。
+ * 残り時間が見えると発火する側に効く（INCUP の U = 緊急）。
+ *
+ * 越えると時間割になる境界が 3 つある。どれも作らない:
+ *   - タスクと紐付ける（「14:00 からタスク A」= 時間割そのもの）
+ *   - 守れたかのチェックを付ける（未達が生まれる）
+ *   - 明日以降を持つ（予定管理アプリになる）
+ */
+export type Plan = {
+  id: string;
+  /** YYYY-MM-DD。今日の分しか持たない */
+  date: string;
+  /** HH:mm */
+  at: string;
+  title: string;
+};
+
 export type DayLog = {
   /** YYYY-MM-DD */
   date: string;
@@ -35,6 +56,7 @@ export type Store = {
   tasks: Task[];
   logs: DayLog[];
   presets: Preset[];
+  plans: Plan[];
 };
 
 /** 名言 1 件。永続化しない定数（lib/quotes.ts） */

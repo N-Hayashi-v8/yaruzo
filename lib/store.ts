@@ -1,4 +1,4 @@
-import type { DayLog, Preset, Store, Task } from "./types";
+import type { DayLog, Plan, Preset, Store, Task } from "./types";
 
 /*
   保存先は IndexedDB。localStorage は容量が 5MB 前後で頭打ちになるうえ、
@@ -11,7 +11,7 @@ import type { DayLog, Preset, Store, Task } from "./types";
 const DB_NAME = "yaruzo";
 const TABLE = "store";
 const KEY = "task-app-v1"; // localStorage 時代と同じキー。引き継ぎで参照する
-const EMPTY: Store = { tasks: [], logs: [], presets: [] };
+const EMPTY: Store = { tasks: [], logs: [], presets: [], plans: [] };
 
 /** 接続は開きっぱなしで使い回す。読み書きのたびに開くと待ちが増える */
 let conn: Promise<IDBDatabase> | null = null;
@@ -42,6 +42,7 @@ const fill = (s: Partial<Store>): Store => ({
   tasks: s.tasks ?? [],
   logs: s.logs ?? [],
   presets: s.presets ?? [],
+  plans: s.plans ?? [],
 });
 
 export async function load(): Promise<Store> {
@@ -140,6 +141,26 @@ export function logFor(store: Store, date: string): DayLog {
 export function putLog(store: Store, log: DayLog): Store {
   const rest = store.logs.filter((l) => l.date !== log.date);
   return { ...store, logs: [...rest, log] };
+}
+
+/**
+ * 今日の約束を足す。持つのは 時刻 と 内容 だけ。
+ * 足すたびに前の日の分を落とす（今日の分しか持たない = 予定管理にしない）。
+ */
+export function addPlan(store: Store, date: string, at: string, title: string): Store {
+  const clean = title.trim();
+  if (clean === "" || !/^\d{2}:\d{2}$/.test(at)) return store;
+  const plan: Plan = { id: crypto.randomUUID(), date, at, title: clean };
+  return { ...store, plans: [...store.plans.filter((p) => p.date >= date), plan] };
+}
+
+export function removePlan(store: Store, id: string): Store {
+  return { ...store, plans: store.plans.filter((p) => p.id !== id) };
+}
+
+/** その日の約束を時刻順で。過ぎたものも消さずに出す（消すと「あった」ことまで消える） */
+export function plansFor(store: Store, date: string): Plan[] {
+  return store.plans.filter((p) => p.date === date).sort((a, b) => a.at.localeCompare(b.at));
 }
 
 /**

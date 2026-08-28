@@ -3,13 +3,16 @@
 import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import {
+  addPlan,
   addPreset,
   completeTask,
   load,
   logFor,
   newTask,
+  plansFor,
   presetsByRecent,
   putLog,
+  removePlan,
   removePreset,
   save,
   setEstimate,
@@ -38,6 +41,17 @@ import {
 
 const mmss = (sec: number) =>
   `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+/** 約束までの残り。1 時間を超えたら分だけの数字は量として掴みにくいので時間を出す */
+const until = (min: number) => {
+  if (min <= 0) return "いま";
+  if (min < 60) return `あと ${min}分`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m === 0 ? `あと ${h}時間` : `あと ${h}時間${m}分`;
+};
 
 const isThisMonth = (ts: number) => {
   const d = new Date(ts);
@@ -171,6 +185,18 @@ export default function Home() {
     setStartedAt(null);
     if (taskId === null) setRestQuote(pickQuote(REST_QUOTES)); // からっぽに入った
   }
+
+  /**
+   * いまの時刻。分単位の epoch で持つ。
+   * 1 秒ごとに叩いても値が変わるのは分が変わったときだけなので、再描画も毎分で済む
+   */
+  const [minute, setMinute] = useState(0);
+  useEffect(() => {
+    const tick = () => setMinute(Math.floor(Date.now() / 60000));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (startedAt === null) return;
@@ -351,6 +377,16 @@ export default function Home() {
   // 目安を超えたらバーが満ちて止まるだけ。超過を責めない（DESIGN.md 4章）
   const donePct = total > 0 ? Math.min(100, Math.round((elapsed / total) * 100)) : 0;
 
+  // いまの時刻と、今日の約束。分が変わったときだけ計算し直る（minute が変わらないと再描画されない）
+  const clock = new Date(minute * 60000);
+  const nowHm = `${pad2(clock.getHours())}:${pad2(clock.getMinutes())}`;
+  const plans = plansFor(store, today);
+  const nextPlan = plans.find((p) => p.at > nowHm) ?? null;
+  const minsToNext = nextPlan
+    ? (Number(nextPlan.at.slice(0, 2)) - clock.getHours()) * 60 +
+      (Number(nextPlan.at.slice(3, 5)) - clock.getMinutes())
+    : 0;
+
   return (
     <>
       <header className="flex h-[68px] flex-shrink-0 items-center gap-6 bg-foreground px-6 text-background">
@@ -516,24 +552,77 @@ export default function Home() {
         </main>
 
         {/*
-          P で送った札だけ出す。未着手の一覧でも残数でもない = 全体量は見せない（DESIGN.md 3章）。
-          「消えてはいない」ことだけ渡す。押せないのは、選んで戻せると優先度を付ける操作になるから。
-          永続化しないので閉じれば消える（残すと「避けている一覧」になる。4章）。
+          右の柱。常に出しておく（出たり消えたりすると NOW の幅が動く）。
           狭い画面では出さない。NOW を細くするほうが害が大きい
         */}
-        {passedTasks.length > 0 && (
-          <aside className="hidden w-60 flex-shrink-0 flex-col gap-3 overflow-y-auto border-l-4 border-foreground px-5 py-8 lg:flex">
-            <span className="font-mono text-xs font-bold tracking-[0.12em] opacity-55">あとで</span>
-            {passedTasks.map((t) => (
-              <span
-                key={t.id}
-                className="border-[3px] border-current px-3 py-2 text-[15px] leading-snug font-bold opacity-70"
+        <aside className="hidden w-64 flex-shrink-0 flex-col gap-7 overflow-y-auto border-l-4 border-foreground px-5 py-7 lg:flex">
+          {/* いま何時か。時間が見えないと「まだある」と思ったまま溶ける（DESIGN.md 1章 時間盲） */}
+          <div className="flex flex-col gap-1">
+            <span className="font-mono text-5xl leading-none font-black tabular-nums">{nowHm}</span>
+            <span className="font-mono text-xs font-bold opacity-50">{today}</span>
+          </div>
+
+          {/*
+            今日の約束。外から来て動かせないものだけ（DESIGN.md 1章・7章）。
+            タスクは紐付けない = 時間割にしない。次の 1 件だけ残り時間を出す
+          */}
+          <div className="flex flex-col gap-2.5">
+            <span className="font-mono text-xs font-bold tracking-[0.12em] opacity-55">約束</span>
+            {plans.length === 0 ? (
+              <button
+                onClick={() => setOverlay("today")}
+                className="border-[3px] border-dashed border-current px-3 py-2 text-left text-[13px] font-bold opacity-45"
               >
-                {t.title}
+                なし（T で入れる）
+              </button>
+            ) : (
+              plans.map((p) => {
+                const next = p.id === nextPlan?.id;
+                return (
+                  <div
+                    key={p.id}
+                    className={`flex flex-col gap-0.5 border-[3px] px-3 py-2 ${
+                      next
+                        ? "border-foreground bg-accent text-on-accent shadow-[5px_5px_0_var(--color-foreground)]"
+                        : `border-current ${p.at < nowHm ? "opacity-40" : "opacity-75"}`
+                    }`}
+                  >
+                    <span className="flex items-baseline gap-2">
+                      <span className="font-mono text-lg font-black tabular-nums">{p.at}</span>
+                      {next && (
+                        <span className="font-mono text-[11px] font-bold">
+                          {until(minsToNext)}
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-[15px] leading-snug font-bold">{p.title}</span>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/*
+            P で送った札だけ出す。未着手の一覧でも残数でもない = 全体量は見せない（DESIGN.md 3章）。
+            「消えてはいない」ことだけ渡す。押せないのは、選んで戻せると優先度を付ける操作になるから。
+            永続化しないので閉じれば消える（残すと「避けている一覧」になる。4章）
+          */}
+          {passedTasks.length > 0 && (
+            <div className="flex flex-col gap-3">
+              <span className="font-mono text-xs font-bold tracking-[0.12em] opacity-55">
+                あとで
               </span>
-            ))}
-          </aside>
-        )}
+              {passedTasks.map((t) => (
+                <span
+                  key={t.id}
+                  className="border-[3px] border-current px-3 py-2 text-[15px] leading-snug font-bold opacity-70"
+                >
+                  {t.title}
+                </span>
+              ))}
+            </div>
+          )}
+        </aside>
       </div>
 
       {/* キーが押せない環境（スマホ）でも同じ操作ができるよう、ヒントはそのままボタン */}
@@ -603,6 +692,10 @@ export default function Home() {
           onToggleLight={() => update((s) => putLog(s, { ...log, gotLight: !log.gotLight }))}
           monthCount={monthCount}
           totalCount={completed.length}
+          plans={plans}
+          nowHm={nowHm}
+          onAddPlan={(at, title) => update((s) => addPlan(s, today, at, title))}
+          onRemovePlan={(id) => update((s) => removePlan(s, id))}
           onClose={() => setOverlay(null)}
         />
       )}

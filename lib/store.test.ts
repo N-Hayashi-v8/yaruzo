@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  addPlan,
   addPreset,
   completeTask,
   logFor,
   newTask,
+  plansFor,
   presetsByRecent,
   putLog,
+  removePlan,
   removePreset,
   setEstimate,
   spawnFromPreset,
@@ -15,7 +18,7 @@ import {
 } from "./store.ts";
 import type { Store, Task } from "./types.ts";
 
-const empty: Store = { tasks: [], logs: [], presets: [] };
+const empty: Store = { tasks: [], logs: [], presets: [], plans: [] };
 
 test("todayKey はローカル日付を YYYY-MM-DD で返す", () => {
   assert.equal(todayKey(new Date(2026, 0, 5, 23, 30)), "2026-01-05");
@@ -52,7 +55,7 @@ const task = (over: Partial<Task> & { id: string }): Task => ({
 });
 
 test("splitTask は埋めた数だけ子を生やす", () => {
-  const s: Store = { tasks: [task({ id: "p" })], logs: [], presets: [] };
+  const s: Store = { tasks: [task({ id: "p" })], logs: [], presets: [], plans: [] };
   const out = splitTask(s, "p", ["A", "", "  ", "B"]);
   const children = out.tasks.filter((t) => t.parentId === "p");
   assert.deepEqual(children.map((c) => c.title), ["A", "B"]);
@@ -61,14 +64,14 @@ test("splitTask は埋めた数だけ子を生やす", () => {
 });
 
 test("splitTask の見積は最低 5 分、刺激度は親を継ぐ", () => {
-  const s: Store = { tasks: [task({ id: "p", estimateMin: 6, stimulation: 3 })], logs: [], presets: [] };
+  const s: Store = { tasks: [task({ id: "p", estimateMin: 6, stimulation: 3 })], logs: [], presets: [], plans: [] };
   const c = splitTask(s, "p", ["a", "b", "c"]).tasks.filter((t) => t.parentId === "p");
   assert.deepEqual(c.map((t) => t.estimateMin), [5, 5, 5]);
   assert.deepEqual(c.map((t) => t.stimulation), [3, 3, 3]);
 });
 
 test("splitTask は空入力や未知の親では何もしない", () => {
-  const s: Store = { tasks: [task({ id: "p" })], logs: [], presets: [] };
+  const s: Store = { tasks: [task({ id: "p" })], logs: [], presets: [], plans: [] };
   assert.equal(splitTask(s, "p", ["", " "]), s);
   assert.equal(splitTask(s, "nope", ["A"]), s);
 });
@@ -82,6 +85,7 @@ test("子が全部済むと親も自動で完了", () => {
     ],
     logs: [],
     presets: [],
+    plans: [],
   };
   const one = completeTask(s, "c1", 100);
   assert.equal(one.tasks.find((t) => t.id === "p")?.completedAt, null);
@@ -98,6 +102,7 @@ test("入れ子の分解でも祖父まで畳む", () => {
     ],
     logs: [],
     presets: [],
+    plans: [],
   };
   const out = completeTask(s, "c", 300);
   assert.equal(out.tasks.find((t) => t.id === "g")?.completedAt, 300);
@@ -142,4 +147,30 @@ test("setEstimate は同じ値や未知の id では Store をそのまま返す
   const one = { ...empty, tasks: [newTask("書類")] };
   assert.equal(setEstimate(one, one.tasks[0].id, 15), one); // 既定値と同じ
   assert.equal(setEstimate(one, "no-such-id", 30), one);
+});
+
+test("addPlan は時刻の形が正しいものだけ受ける", () => {
+  assert.equal(addPlan(empty, "2026-01-05", "14:00", "  ").plans.length, 0);
+  assert.equal(addPlan(empty, "2026-01-05", "1400", "通院").plans.length, 0);
+  assert.equal(addPlan(empty, "2026-01-05", "14:00", " 通院 ").plans[0].title, "通院");
+});
+
+test("addPlan は前の日の約束を落とす（今日の分しか持たない）", () => {
+  const old = addPlan(empty, "2026-01-04", "09:00", "きのう");
+  const now = addPlan(old, "2026-01-05", "14:00", "きょう");
+  assert.deepEqual(now.plans.map((p) => p.title), ["きょう"]);
+});
+
+test("plansFor はその日の分だけを時刻順で返す", () => {
+  let s = addPlan(empty, "2026-01-05", "16:30", "会議");
+  s = addPlan(s, "2026-01-05", "09:15", "通院");
+  s = addPlan(s, "2026-01-05", "14:00", "締切");
+  assert.deepEqual(plansFor(s, "2026-01-05").map((p) => p.at), ["09:15", "14:00", "16:30"]);
+  assert.deepEqual(plansFor(s, "2026-01-06"), []);
+});
+
+test("removePlan は指定した 1 件だけ消す", () => {
+  const s = addPlan(empty, "2026-01-05", "14:00", "通院");
+  assert.deepEqual(removePlan(s, s.plans[0].id).plans, []);
+  assert.equal(removePlan(s, "nope").plans.length, 1);
 });

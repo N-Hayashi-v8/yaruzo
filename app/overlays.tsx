@@ -1,9 +1,9 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 
 import { clampMin } from "@/lib/store";
-import type { Preset, Task } from "@/lib/types";
+import type { Plan, Preset, Task } from "@/lib/types";
 
 /** 5 分の身体タスク。覚醒が落ちて刺激度の高いタスクが無いときに出す（DESIGN.md 3章） */
 export const BODY_TASKS = [
@@ -382,6 +382,10 @@ export function TodayOverlay({
   onToggleLight,
   monthCount,
   totalCount,
+  plans,
+  nowHm,
+  onAddPlan,
+  onRemovePlan,
   onClose,
 }: {
   done: Task[];
@@ -391,11 +395,26 @@ export function TodayOverlay({
   onToggleLight: () => void;
   monthCount: number;
   totalCount: number;
+  plans: Plan[];
+  /** いまの時刻 HH:mm。過ぎた約束を薄くするのに使う。render 中に時計は読めないので受け取る */
+  nowHm: string;
+  onAddPlan: (at: string, title: string) => void;
+  onRemovePlan: (id: string) => void;
   onClose: () => void;
 }) {
   const hhmm = (ts: number) => {
     const d = new Date(ts);
     return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  };
+
+  // 入れたら捨てる一時値なので、ここで持つ（閉じれば消えていい）
+  const [at, setAt] = useState("");
+  const [what, setWhat] = useState("");
+  const put = () => {
+    if (at === "" || what.trim() === "") return;
+    onAddPlan(at, what);
+    setAt("");
+    setWhat("");
   };
 
   return (
@@ -471,6 +490,74 @@ export function TodayOverlay({
         </div>
       </div>
 
+      {/*
+        今日の約束。会議・通院・締切みたいに **外から来て動かせない** ものだけ入れる。
+        タスクは紐付けない。守れたかのチェックも付けない。付けた時点で時間割になる
+        （lib/types.ts の Plan、DESIGN.md 1章・7章）
+      */}
+      <div className="flex flex-col gap-3 border-t-4 border-foreground pt-5">
+        <span className="font-mono text-xs font-bold tracking-[0.12em]">
+          今日の約束（動かせない予定だけ）
+        </span>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="time"
+            value={at}
+            onChange={(e) => setAt(e.target.value)}
+            aria-label="時刻"
+            className="border-4 border-foreground bg-background px-2 py-1.5 font-mono text-xl font-black outline-none"
+          />
+          <input
+            value={what}
+            placeholder="通院・会議・締切"
+            onChange={(e) => setWhat(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.nativeEvent.isComposing) put();
+              if (e.key === "Escape") onClose();
+            }}
+            aria-label="約束の内容"
+            className="min-w-0 flex-1 border-4 border-foreground bg-background px-4 py-2 text-xl font-bold outline-none placeholder:text-current placeholder:opacity-35"
+          />
+          <button
+            onClick={put}
+            disabled={at === "" || what.trim() === ""}
+            className="min-h-12 border-4 border-foreground bg-accent px-5 py-2 font-bold text-on-accent shadow-[6px_6px_0_var(--color-foreground)] disabled:opacity-35 disabled:shadow-none"
+          >
+            入れる
+          </button>
+        </div>
+
+        {plans.length === 0 ? (
+          <p className="text-[15px] font-bold opacity-55">なし。今日は誰とも約束していない。</p>
+        ) : (
+          <div className="flex flex-wrap gap-2.5">
+            {plans.map((p) => (
+              <div
+                key={p.id}
+                // 過ぎたものも消さない。消すと「あった」ことまで消える
+                className={`flex items-stretch border-[3px] border-foreground ${
+                  p.at < nowHm ? "opacity-45" : ""
+                }`}
+              >
+                <span className="flex items-center gap-2.5 px-3 py-1.5">
+                  <span className="font-mono text-lg font-black">{p.at}</span>
+                  <span className="text-[15px] font-bold">{p.title}</span>
+                </span>
+                <button
+                  onClick={() => onRemovePlan(p.id)}
+                  aria-label={`${p.at} ${p.title} を消す`}
+                  className="flex w-8 flex-shrink-0 items-center justify-center border-l-[3px] border-foreground opacity-45 active:bg-accent active:text-on-accent active:opacity-100"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" aria-hidden>
+                    <path d="M6 6l12 12M18 6L6 18" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </Overlay>
   );
 }
