@@ -111,6 +111,21 @@ function autoProbe(): () => void {
   if (typeof window === "undefined" || !window.location.search.includes("auto")) {
     return () => {};
   }
+  // 何も動かしていない状態の rAF。ここが 60 に届かないなら、重いのは描画ではなく
+  // ブラウザか OS がフレームを絞っている（効率モード・省電力・リフレッシュレート）
+  const b0 = performance.now();
+  let bf = 0;
+  const base = (now: number) => {
+    bf += 1;
+    if (now - b0 < 1000) {
+      requestAnimationFrame(base);
+      return;
+    }
+    const ms = now - b0;
+    show(`(静止) ${Math.round(ms)}ms ${bf}f 平均${Math.round(bf / (ms / 1000))}fps`);
+  };
+  requestAnimationFrame(base);
+
   const kinds: ("add" | "pass" | DoneMotion)[] = ["add", "pass", "crumple", "toss", "flip"];
   let i = 0;
   const id = setInterval(() => {
