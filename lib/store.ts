@@ -1,25 +1,81 @@
 import type { DayLog, Preset, Store, Task } from "./types";
 
-const KEY = "task-app-v1";
+/*
+  保存先は IndexedDB。localStorage は容量が 5MB 前後で頭打ちになるうえ、
+  完了タスクは履歴として残し続ける（消さない）ので、増える一方のデータを置く場所ではない。
+
+  持ち方は 1 レコードに Store 全体。読むときは全部読み、書くときは全部書く。
+  タスクの件数で分ける形にしても、この規模だと引き当てが速くなるより
+  更新の手数が増えるほうが効く。分けるのは絞り込みが要るようになってから
+*/
+const DB_NAME = "yaruzo";
+const TABLE = "store";
+const KEY = "task-app-v1"; // localStorage 時代と同じキー。引き継ぎで参照する
 const EMPTY: Store = { tasks: [], logs: [], presets: [] };
 
-export function load(): Store {
+/** 接続は開きっぱなしで使い回す。読み書きのたびに開くと待ちが増える */
+let conn: Promise<IDBDatabase> | null = null;
+
+function db(): Promise<IDBDatabase> {
+  conn ??= new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(TABLE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  return conn;
+}
+
+function request<T>(mode: IDBTransactionMode, run: (t: IDBObjectStore) => IDBRequest<T>) {
+  return db().then(
+    (d) =>
+      new Promise<T>((resolve, reject) => {
+        const req = run(d.transaction(TABLE, mode).objectStore(TABLE));
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      }),
+  );
+}
+
+/** 無い配列を空で埋める。定番を持たない頃のデータでも起動できるように */
+const fill = (s: Partial<Store>): Store => ({
+  tasks: s.tasks ?? [],
+  logs: s.logs ?? [],
+  presets: s.presets ?? [],
+});
+
+export async function load(): Promise<Store> {
   if (typeof window === "undefined") return EMPTY;
   try {
+    const found = await request<Partial<Store> | undefined>("readonly", (t) => t.get(KEY));
+    if (found) return fill(found);
+
+    // localStorage に貯めていた頃のデータを 1 回だけ引き取る
     const raw = localStorage.getItem(KEY);
     if (!raw) return EMPTY;
-    const parsed = JSON.parse(raw) as Partial<Store>;
-    // 定番を持たない旧データでも起動できるように、無い配列は空で埋める
-    return { tasks: parsed.tasks ?? [], logs: parsed.logs ?? [], presets: parsed.presets ?? [] };
+    const moved = fill(JSON.parse(raw) as Partial<Store>);
+    await request("readwrite", (t) => t.put(moved, KEY));
+    localStorage.removeItem(KEY); // 移し終えてから消す。put が転けたらここへ来ない
+    return moved;
   } catch {
-    // 壊れた JSON で起動不能にしない
-    return EMPTY;
+    // IndexedDB を開けない/壊れている。空を返すと、そのまま何か足して保存した時点で
+    // 移し損ねた履歴が読めなくなる。引き取り前の localStorage が残っていればそれで動かす
+    try {
+      const raw = localStorage.getItem(KEY);
+      return raw ? fill(JSON.parse(raw) as Partial<Store>) : EMPTY;
+    } catch {
+      return EMPTY; // 壊れた JSON。ここまで来たら起動を止めないことだけ優先する
+    }
   }
 }
 
+/**
+ * 投げっぱなしで書く。待たないので呼び出し側は同期のまま。
+ * 画面はすでに新しい Store で描けていて、書き込みの完了を待つ理由がない
+ */
 export function save(store: Store): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(KEY, JSON.stringify(store));
+  void request("readwrite", (t) => t.put(store, KEY)).catch(() => {});
 }
 
 /** 目安分の丸め。5 分刻み・5〜180 分。画面のドラッグと store の両方で使う */

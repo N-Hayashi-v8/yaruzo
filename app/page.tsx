@@ -135,19 +135,25 @@ export default function Home() {
   const [restQuote, setRestQuote] = useState<Quote>(() => pickQuote(REST_QUOTES));
   const running = startedAt !== null;
 
-  // localStorage は client でしか読めない。lazy init だと hydration が食い違うので mount 後に読む
+  // 保存先は client でしか読めない。lazy init だと hydration が食い違うので mount 後に読む。
+  // IndexedDB は非同期なので、読めるまで store は null（画面はまだ何も出さない）
   useEffect(() => {
-    const s = load();
-    /* eslint-disable react-hooks/set-state-in-effect */
-    setStore(s);
-    setPickedId(nextTask(s.tasks)?.id ?? null); // 起動時に 1 回引く
-    /* eslint-enable react-hooks/set-state-in-effect */
+    let alive = true;
+    void load().then((s) => {
+      if (!alive) return; // 読んでいる途中で外れた
+      setStore(s);
+      setPickedId(nextTask(s.tasks)?.id ?? null); // 起動時に 1 回引く
+    });
 
     // Service Worker。サーバを起動しなくてもアプリ窓が開くようにする（public/sw.js）。
     // dev で登録すると古いバンドルがキャッシュから返って開発が壊れるので本番だけ
     if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js");
     }
+
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const live = (tasks: Task[]) => withoutPassed(tasks, passed);
@@ -157,7 +163,7 @@ export default function Home() {
   const taskId = task?.id ?? null;
   const estimateMin = task?.estimateMin ?? 0;
 
-  // タスクが変わったらタイマーを積み直す（render 中の state 調整。理由は上と同じ）
+  // タスクが変わったらタイマーを積み直す（effect を挟まず render 中に直す）
   const [shownTaskId, setShownTaskId] = useState(taskId);
   if (shownTaskId !== taskId) {
     setShownTaskId(taskId);
