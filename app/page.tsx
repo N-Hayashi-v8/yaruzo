@@ -64,111 +64,15 @@ const swap = (kind: "add" | "pass" | DoneMotion, fn: () => void) => {
   vtRunning = true;
   const root = document.documentElement;
   root.dataset.vt = kind; // CSS 側の分岐。globals.css の html[data-vt=...]
-  const stop = probe(kind);
   const done = () => {
     delete root.dataset.vt;
     vtRunning = false;
-    stop();
   };
   // finished は途中で打ち切られると reject する。成功も失敗も同じ後始末
   document.startViewTransition(() => flushSync(fn)).finished.then(done, done);
 };
 
 let vtRunning = false;
-
-/* ------------------------------------------------------------------
-   動きのカクつきを切り分けるための一時コード。原因が分かったら消す。
-   ?probe=1 を付けて開いたときだけ動く（yaruzo.bat の本番ビルドでも測れる）。
-
-   数字は画面の右下に出す。console に出すと開発者ツールを開くことになり、
-   それ自体が数フレーム食って測りたいものが測れない。
-   窓は「動いている間」だけ。静止中まで数えると平均が薄まる
-   ------------------------------------------------------------------ */
-
-const probing = () =>
-  typeof window !== "undefined" && window.location.search.includes("probe");
-
-/** 素の DOM に直接書く。React の state にすると再レンダリングが計測を汚す */
-function show(line: string) {
-  let el = document.getElementById("probe-out");
-  if (!el) {
-    el = document.createElement("div");
-    el.id = "probe-out";
-    el.style.cssText =
-      "position:fixed;right:8px;bottom:62px;z-index:99;padding:8px 10px;" +
-      "background:#000;color:#7CFC00;font:11px/1.6 monospace;white-space:pre;pointer-events:none";
-    document.body.appendChild(el);
-  }
-  el.textContent = `${line}\n${el.textContent ?? ""}`.split("\n").slice(0, 8).join("\n");
-}
-
-/**
- * ?probe=auto で開いたときだけ、5 種のモーションを順に 1 回ずつ流す。
- * 中身を変えない差し替えなので画面の結果は変わらないが、
- * スナップショットの大きさもアニメも本番と同じものが走る
- */
-function autoProbe(): () => void {
-  if (typeof window === "undefined" || !window.location.search.includes("auto")) {
-    return () => {};
-  }
-  // 何も動かしていない状態の rAF。ここが 60 に届かないなら、重いのは描画ではなく
-  // ブラウザか OS がフレームを絞っている（効率モード・省電力・リフレッシュレート）
-  const b0 = performance.now();
-  let bf = 0;
-  const base = (now: number) => {
-    bf += 1;
-    if (now - b0 < 1000) {
-      requestAnimationFrame(base);
-      return;
-    }
-    const ms = now - b0;
-    show(`(静止) ${Math.round(ms)}ms ${bf}f 平均${Math.round(bf / (ms / 1000))}fps`);
-  };
-  requestAnimationFrame(base);
-
-  const kinds: ("add" | "pass" | DoneMotion)[] = ["add", "pass", "crumple", "toss", "flip"];
-  let i = 0;
-  const id = setInterval(() => {
-    if (i >= kinds.length) {
-      clearInterval(id);
-      return;
-    }
-    swap(kinds[i], () => {});
-    i += 1;
-  }, 1500);
-  return () => clearInterval(id);
-}
-
-/** 動いている間のフレーム間隔。戻り値を呼ぶと止まって結果を出す */
-function probe(kind: string): () => void {
-  if (!probing()) return () => {};
-  const t0 = performance.now();
-  let last = t0;
-  let frames = 0;
-  let worst = 0;
-  let worstAt = 0;
-  let alive = true;
-  const tick = (now: number) => {
-    if (!alive) return;
-    const gap = now - last;
-    last = now;
-    frames += 1;
-    if (gap > worst) {
-      worst = gap;
-      worstAt = now - t0;
-    }
-    requestAnimationFrame(tick);
-  };
-  requestAnimationFrame(tick);
-  return () => {
-    alive = false;
-    const ms = performance.now() - t0;
-    show(
-      `${kind.padEnd(8)} ${Math.round(ms)}ms ${frames}f ` +
-        `平均${Math.round(frames / (ms / 1000))}fps 最悪${worst.toFixed(0)}ms@${Math.round(worstAt)}ms`,
-    );
-  };
-}
 
 /**
  * 完了したときの札の飛び方。毎回引く。
@@ -245,9 +149,6 @@ export default function Home() {
       navigator.serviceWorker.register("/sw.js");
     }
   }, []);
-
-  // 一時。?probe=auto で開くと 5 種を順に 1 回ずつ流して数字を出す（触らなくていい）
-  useEffect(() => autoProbe(), []);
 
   const live = (tasks: Task[]) => withoutPassed(tasks, passed);
 
