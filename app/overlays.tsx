@@ -384,7 +384,9 @@ export function TodayOverlay({
   totalCount,
   plans,
   nowHm,
+  editPlanId,
   onAddPlan,
+  onUpdatePlan,
   onRemovePlan,
   onClose,
 }: {
@@ -398,7 +400,10 @@ export function TodayOverlay({
   plans: Plan[];
   /** いまの時刻 HH:mm。過ぎた約束を薄くするのに使う。render 中に時計は読めないので受け取る */
   nowHm: string;
+  /** 開いた時点で編集にしておく約束。NOW の右の柱から押されたとき渡ってくる */
+  editPlanId: string | null;
   onAddPlan: (at: string, title: string) => void;
+  onUpdatePlan: (id: string, at: string, title: string) => void;
   onRemovePlan: (id: string) => void;
   onClose: () => void;
 }) {
@@ -407,14 +412,33 @@ export function TodayOverlay({
     return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   };
 
-  // 入れたら捨てる一時値なので、ここで持つ（閉じれば消えていい）
-  const [at, setAt] = useState("");
-  const [what, setWhat] = useState("");
-  const put = () => {
-    if (at === "" || what.trim() === "") return;
-    onAddPlan(at, what);
+  // 入れたら捨てる一時値なので、ここで持つ（閉じれば消えていい）。
+  // 開いた時点で編集を指定されていれば、その中身を載せた状態から始める
+  const opened = plans.find((p) => p.id === editPlanId) ?? null;
+  const [editing, setEditing] = useState<string | null>(opened?.id ?? null);
+  const [at, setAt] = useState(opened?.at ?? "");
+  const [what, setWhat] = useState(opened?.title ?? "");
+
+  const clear = () => {
+    setEditing(null);
     setAt("");
     setWhat("");
+  };
+  const put = () => {
+    if (at === "" || what.trim() === "") return;
+    if (editing) onUpdatePlan(editing, at, what);
+    else onAddPlan(at, what);
+    clear();
+  };
+  /** 押した約束を入力欄に載せる。もう一度押したら編集をやめる */
+  const pick = (p: Plan) => {
+    if (editing === p.id) {
+      clear();
+      return;
+    }
+    setEditing(p.id);
+    setAt(p.at);
+    setWhat(p.title);
   };
 
   return (
@@ -497,7 +521,7 @@ export function TodayOverlay({
       */}
       <div className="flex flex-col gap-3 border-t-4 border-foreground pt-5">
         <span className="font-mono text-xs font-bold tracking-[0.12em]">
-          今日の約束（動かせない予定だけ）
+          {editing ? "約束を直す" : "今日の約束（動かせない予定だけ）"}
         </span>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -524,8 +548,16 @@ export function TodayOverlay({
             disabled={at === "" || what.trim() === ""}
             className="min-h-12 border-4 border-foreground bg-accent px-5 py-2 font-bold text-on-accent shadow-[6px_6px_0_var(--color-foreground)] disabled:opacity-35 disabled:shadow-none"
           >
-            入れる
+            {editing ? "直す" : "入れる"}
           </button>
+          {editing && (
+            <button
+              onClick={clear}
+              className="min-h-12 border-[3px] border-current px-4 py-2 text-[15px] font-bold active:bg-accent active:text-on-accent"
+            >
+              やめる
+            </button>
+          )}
         </div>
 
         {plans.length === 0 ? (
@@ -537,17 +569,25 @@ export function TodayOverlay({
                 key={p.id}
                 // 過ぎたものも消さない。消すと「あった」ことまで消える
                 className={`flex items-stretch border-[3px] border-foreground ${
-                  p.at < nowHm ? "opacity-45" : ""
-                }`}
+                  editing === p.id ? "bg-accent text-on-accent" : ""
+                } ${p.at < nowHm && editing !== p.id ? "opacity-45" : ""}`}
               >
-                <span className="flex items-center gap-2.5 px-3 py-1.5">
+                {/* 押すと上の欄に載って直せる。もう一度押すと編集をやめる */}
+                <button
+                  onClick={() => pick(p)}
+                  aria-label={`${p.at} ${p.title} を直す`}
+                  className="flex items-center gap-2.5 px-3 py-1.5"
+                >
                   <span className="font-mono text-lg font-black">{p.at}</span>
                   <span className="text-[15px] font-bold">{p.title}</span>
-                </span>
+                </button>
                 <button
-                  onClick={() => onRemovePlan(p.id)}
+                  onClick={() => {
+                    if (editing === p.id) clear(); // 直している最中に消したら欄も戻す
+                    onRemovePlan(p.id);
+                  }}
                   aria-label={`${p.at} ${p.title} を消す`}
-                  className="flex w-8 flex-shrink-0 items-center justify-center border-l-[3px] border-foreground opacity-45 active:bg-accent active:text-on-accent active:opacity-100"
+                  className="flex w-8 flex-shrink-0 items-center justify-center border-l-[3px] border-current opacity-45 active:bg-foreground active:text-background active:opacity-100"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" aria-hidden>
                     <path d="M6 6l12 12M18 6L6 18" />

@@ -149,14 +149,26 @@ export function putLog(store: Store, log: DayLog): Store {
  */
 export function addPlan(store: Store, date: string, at: string, title: string): Store {
   const clean = title.trim();
-  if (clean === "" || !/^\d{2}:\d{2}$/.test(at)) return store;
+  if (clean === "" || !isHm(at)) return store;
   const plan: Plan = { id: crypto.randomUUID(), date, at, title: clean };
   return { ...store, plans: [...store.plans.filter((p) => p.date >= date), plan] };
+}
+
+/** 時刻も内容も後から直せる。約束は動く（会議がずれる・場所が変わる） */
+export function updatePlan(store: Store, id: string, at: string, title: string): Store {
+  const clean = title.trim();
+  if (clean === "" || !isHm(at)) return store;
+  return {
+    ...store,
+    plans: store.plans.map((p) => (p.id === id ? { ...p, at, title: clean } : p)),
+  };
 }
 
 export function removePlan(store: Store, id: string): Store {
   return { ...store, plans: store.plans.filter((p) => p.id !== id) };
 }
+
+const isHm = (at: string) => /^\d{2}:\d{2}$/.test(at);
 
 /** その日の約束を時刻順で。過ぎたものも消さずに出す（消すと「あった」ことまで消える） */
 export function plansFor(store: Store, date: string): Plan[] {

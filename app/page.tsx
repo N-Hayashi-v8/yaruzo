@@ -19,6 +19,7 @@ import {
   spawnFromPreset,
   splitTask,
   todayKey,
+  updatePlan,
 } from "@/lib/store";
 import {
   completedLeaves,
@@ -145,6 +146,8 @@ export default function Home() {
   /** 追加画面で決めた目安分。入れたら既定に戻す（前のタスクの値を引きずらせない） */
   const [draftMin, setDraftMin] = useState(15);
   const [cheer, setCheer] = useState<{ word: string; quote: Quote } | null>(null);
+  /** 右の柱から押された約束。「今日」画面をその編集で開く。閉じれば戻す */
+  const [editPlanId, setEditPlanId] = useState<string | null>(null);
   /** からっぽ画面に出す言葉。からっぽに入るたび引き直す（下の shownTaskId のブロック） */
   const [restQuote, setRestQuote] = useState<Quote>(() => pickQuote(REST_QUOTES));
   const running = startedAt !== null;
@@ -259,6 +262,12 @@ export default function Home() {
    */
   const addSwap = (fn: () => void) => (task ? fn() : swap("add", fn));
 
+  /** 「今日」画面を開く。約束の id を渡すとその編集から始まる（右の柱を押したとき） */
+  const openToday = (planId: string | null = null) => {
+    setEditPlanId(planId);
+    setOverlay("today");
+  };
+
   const add = () => {
     const title = draft.trim();
     if (!title) return;
@@ -349,7 +358,7 @@ export default function Home() {
         setOverlay("sleepy");
       } else if (e.key.toLowerCase() === "t") {
         e.preventDefault();
-        setOverlay("today");
+        openToday();
       } else if (e.key.toLowerCase() === "p") {
         e.preventDefault();
         pass();
@@ -570,7 +579,7 @@ export default function Home() {
             <span className="font-mono text-xs font-bold tracking-[0.12em] opacity-55">約束</span>
             {plans.length === 0 ? (
               <button
-                onClick={() => setOverlay("today")}
+                onClick={() => openToday()}
                 className="border-[3px] border-dashed border-current px-3 py-2 text-left text-[13px] font-bold opacity-45"
               >
                 なし（T で入れる）
@@ -579,9 +588,11 @@ export default function Home() {
               plans.map((p) => {
                 const next = p.id === nextPlan?.id;
                 return (
-                  <div
+                  // 押すと「今日」画面がこの約束の編集で開く。柱は狭いので入力欄は置かない
+                  <button
                     key={p.id}
-                    className={`flex flex-col gap-0.5 border-[3px] px-3 py-2 ${
+                    onClick={() => openToday(p.id)}
+                    className={`flex flex-col gap-0.5 border-[3px] px-3 py-2 text-left ${
                       next
                         ? "border-foreground bg-accent text-on-accent shadow-[5px_5px_0_var(--color-foreground)]"
                         : `border-current ${p.at < nowHm ? "opacity-40" : "opacity-75"}`
@@ -596,7 +607,7 @@ export default function Home() {
                       )}
                     </span>
                     <span className="text-[15px] leading-snug font-bold">{p.title}</span>
-                  </div>
+                  </button>
                 );
               })
             )}
@@ -638,7 +649,7 @@ export default function Home() {
           disabled={!stored || body !== null}
         />
         <HintButton keyLabel="S" label="眠い" onClick={() => setOverlay("sleepy")} />
-        <HintButton keyLabel="T" label="今日" onClick={() => setOverlay("today")} />
+        <HintButton keyLabel="T" label="今日" onClick={() => openToday()} />
       </footer>
 
       {overlay === "add" && (
@@ -694,7 +705,9 @@ export default function Home() {
           totalCount={completed.length}
           plans={plans}
           nowHm={nowHm}
+          editPlanId={editPlanId}
           onAddPlan={(at, title) => update((s) => addPlan(s, today, at, title))}
+          onUpdatePlan={(id, at, title) => update((s) => updatePlan(s, id, at, title))}
           onRemovePlan={(id) => update((s) => removePlan(s, id))}
           onClose={() => setOverlay(null)}
         />

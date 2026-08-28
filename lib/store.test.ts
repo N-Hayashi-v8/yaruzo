@@ -15,6 +15,7 @@ import {
   spawnFromPreset,
   splitTask,
   todayKey,
+  updatePlan,
 } from "./store.ts";
 import type { Store, Task } from "./types.ts";
 
@@ -173,4 +174,21 @@ test("removePlan は指定した 1 件だけ消す", () => {
   const s = addPlan(empty, "2026-01-05", "14:00", "通院");
   assert.deepEqual(removePlan(s, s.plans[0].id).plans, []);
   assert.equal(removePlan(s, "nope").plans.length, 1);
+});
+
+test("updatePlan は時刻も内容も差し替える", () => {
+  const s = addPlan(empty, "2026-01-05", "14:00", "通院");
+  const id = s.plans[0].id;
+  const out = updatePlan(s, id, "16:30", " 会議 ");
+  assert.deepEqual([out.plans[0].at, out.plans[0].title], ["16:30", "会議"]);
+  assert.equal(out.plans[0].date, "2026-01-05"); // 日付は動かさない
+  assert.equal(s.plans[0].at, "14:00"); // 元は書き換えない
+});
+
+test("updatePlan は形が壊れた入力や未知の id では何もしない", () => {
+  const s = addPlan(empty, "2026-01-05", "14:00", "通院");
+  const id = s.plans[0].id;
+  assert.equal(updatePlan(s, id, "1630", "会議"), s);
+  assert.equal(updatePlan(s, id, "16:30", "   "), s);
+  assert.deepEqual(updatePlan(s, "nope", "16:30", "会議").plans, s.plans);
 });
