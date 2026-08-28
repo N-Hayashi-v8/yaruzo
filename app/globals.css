@@ -258,15 +258,6 @@ html[data-vt="pass"]::view-transition-new(now) {
   animation: catch 420ms linear 260ms both;
 }
 
-/*
-  old と new でサイズが違うと、既定では width/height を毎フレーム補間して
-  スナップショットを潰しながら動かす。P で「あとで」カラムが出た瞬間に main が
-  244px 縮むので、そこで札が横に歪む。位置もサイズも変えず、中身だけ入れ替える
-*/
-::view-transition-group(now) {
-  animation: none;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .anim-unfold,
   .anim-fade,

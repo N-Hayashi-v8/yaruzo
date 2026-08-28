@@ -453,12 +453,7 @@ export default function Home() {
       </header>
 
       <div className="flex min-h-0 flex-1">
-        {/* view-transition-name を main だけに付ける。差し替わるのはここの中身だけで、
-            ヘッダ・フッタは静止させる（swap() と globals.css） */}
-        <main
-          style={{ viewTransitionName: "now" }}
-          className="flex min-w-0 flex-1 flex-col justify-center gap-7 px-8 py-8 sm:px-12"
-        >
+        <main className="flex min-w-0 flex-1 flex-col justify-center gap-7 px-8 py-8 sm:px-12">
           {task ? (
             <>
               <div className="flex flex-wrap items-center gap-2.5">
@@ -477,7 +472,15 @@ export default function Home() {
                 />
               </div>
 
-              <h1 className="max-w-3xl font-display text-5xl leading-[1.08] tracking-tight text-pretty sm:text-7xl">
+              {/*
+                動かすのは札 = このタイトルだけ。main ごと名前を付けると画面の 8 割を占める
+                ビットマップを毎フレーム変形することになって描画が追いつかない。
+                タイマーやボタンは常設の道具なので、飛ばさず即差し替える
+              */}
+              <h1
+                style={{ viewTransitionName: "now" }}
+                className="max-w-3xl font-display text-5xl leading-[1.08] tracking-tight text-pretty sm:text-7xl"
+              >
                 {task.title}
               </h1>
 
@@ -554,7 +557,11 @@ export default function Home() {
             </>
           ) : (
             <>
-              <h1 className="font-display text-6xl leading-none tracking-tight sm:text-[7rem]">
+              {/* タスク側の h1 と同じ名前。最後の 1 枚が飛んだ先がここに繋がる */}
+              <h1
+                style={{ viewTransitionName: "now" }}
+                className="font-display text-6xl leading-none tracking-tight sm:text-[7rem]"
+              >
                 からっぽ。
               </h1>
               <div className="flex items-center gap-5">
