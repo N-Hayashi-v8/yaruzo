@@ -102,6 +102,28 @@ function show(line: string) {
   el.textContent = `${line}\n${el.textContent ?? ""}`.split("\n").slice(0, 8).join("\n");
 }
 
+/**
+ * ?probe=auto で開いたときだけ、5 種のモーションを順に 1 回ずつ流す。
+ * 中身を変えない差し替えなので画面の結果は変わらないが、
+ * スナップショットの大きさもアニメも本番と同じものが走る
+ */
+function autoProbe(): () => void {
+  if (typeof window === "undefined" || !window.location.search.includes("auto")) {
+    return () => {};
+  }
+  const kinds: ("add" | "pass" | DoneMotion)[] = ["add", "pass", "crumple", "toss", "flip"];
+  let i = 0;
+  const id = setInterval(() => {
+    if (i >= kinds.length) {
+      clearInterval(id);
+      return;
+    }
+    swap(kinds[i], () => {});
+    i += 1;
+  }, 1500);
+  return () => clearInterval(id);
+}
+
 /** 動いている間のフレーム間隔。戻り値を呼ぶと止まって結果を出す */
 function probe(kind: string): () => void {
   if (!probing()) return () => {};
@@ -208,6 +230,9 @@ export default function Home() {
       navigator.serviceWorker.register("/sw.js");
     }
   }, []);
+
+  // 一時。?probe=auto で開くと 5 種を順に 1 回ずつ流して数字を出す（触らなくていい）
+  useEffect(() => autoProbe(), []);
 
   const live = (tasks: Task[]) => withoutPassed(tasks, passed);
 
