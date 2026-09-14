@@ -23,7 +23,8 @@
 ## スタック
 
 - Next.js (App Router) + TypeScript
-- 永続化: localStorage のみ。サーバ・DB・認証 なし
+- 永続化: IndexedDB のみ（`lib/store.ts`）。サーバ・認証 なし
+- 配布: Tauri のデスクトップアプリ（`src-tauri/`）。web 版も Vercel に残す（`/about` を人に見せる用）
 - スタイル: Tailwind
 
 ## 状態
@@ -35,10 +36,11 @@ P5 定番（何度もやることの雛形。1タップで生える）・タイ�
 名言（からっぽ画面 と 完了直後。lib/quotes.ts）/
 いったんやめる `P`（外した分が積み上がる。永続化しない。右カラム「あとで」に出る）/
 目安分の変更（NOW と 追加画面 のバッジを上下ドラッグ。5分刻み・5〜180分。上下キーでも可）/
-PWA（app/manifest.ts・public/sw.js。インストールすればサーバなしで起動）。
+デスクトップアプリ化（Tauri。`npm run tauri build` でインストーラが出る）。
+web 版の PWA マニフェスト（app/manifest.ts）は Vercel 用に残している。
 外部サービスは使わない。LLM 分解は不採用（DESIGN.md 3章 分解）。
 
-人に見せる用の説明ページ = `public/about.html`（`/about` で開く）。素の HTML。
+人に見せる用の説明ページ = `public/about/index.html`（`/about` で開く）。素の HTML。
 中身を直したいときは このファイルを直接 編集して push。Vercel が勝手に公開する。
 
 ## コマンド
@@ -50,6 +52,9 @@ npm run dev     # 開発サーバ
 npm run build   # ビルド
 npm run lint    # lint
 npm test        # テスト（node --test）
+
+npm run tauri build   # デスクトップアプリのインストーラを作る（初回は数分）
+npm run tauri dev     # アプリの窓で開発サーバを見る
 ```
 
 ## git
@@ -79,8 +84,8 @@ Slack 報告は この形。1行目の括弧に技術スタックを入れる（
 ## 実装方針
 
 - 最小構成優先。ライブラリ追加は「数行で書けない」と確認してから
-- 状態管理ライブラリ 不要。useState + localStorage で足りる
-- localStorage アクセスは `lib/store.ts` 1ファイルに集約。コンポーネント直叩き 禁止
+- 状態管理ライブラリ 不要。useState + IndexedDB で足りる
+- IndexedDB アクセスは `lib/store.ts` 1ファイルに集約。コンポーネント直叩き 禁止
 - `app/page.tsx` のハンドラを `useCallback` で包むな。React Compiler が
   「既存のメモ化を保持できない」で **コンパイル全体を飛ばす**（lint error）。自動メモ化に任せる
 - SSR 中 `window` 参照 不可。`useEffect` 内 or `typeof window` ガード

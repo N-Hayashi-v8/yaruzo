@@ -17,22 +17,31 @@ npm install
 npm run dev     # http://localhost:3000
 ```
 
-Windows なら `yaruzo.bat` ダブルクリック（ビルドして本番サーバを立て、ブラウザで開く）。
-そこから PWA としてインストールすれば、2 回目以降はスタートメニューから直接・サーバごと不要（→ SETUP.md 3）。
+普段使うのは **デスクトップアプリ**。ビルドして入れる:
+
+```bash
+npm run tauri build
+```
+
+`src-tauri/target/release/bundle/nsis/` に出たインストーラを実行すると
+スタートメニューに「やるぞ！」が入る。以降はそこから起動（→ SETUP.md 2-1）。
+ビルドには Rust と C++ Build Tools が要る（→ SETUP.md 1）。
 
 ## 中身
 
 - Next.js (App Router) + TypeScript + Tailwind
-- 永続化: **localStorage のみ**。サーバ・DB・認証・外部サービス なし
-- データは PC のブラウザに閉じる。PC を変えると引き継がれない（→ SETUP.md 4-1）
+- 配布: **Tauri**（デスクトップアプリ）。web 版も Vercel に残す（`/about` を人に見せる用）
+- 永続化: **IndexedDB のみ**。サーバ・認証・外部サービス なし
+- データは PC の中に閉じる。PC を変えると引き継がれない（→ SETUP.md 4-1）
 
 ```text
 app/page.tsx        # NOW 画面
 app/overlays.tsx    # 追加 / 分解 / 眠い / 今日
 lib/types.ts        # 型定義（データ形状の唯一の真実）
-lib/store.ts        # localStorage 読み書き 集約
+lib/store.ts        # IndexedDB 読み書き 集約
 lib/select.ts       # 次タスク選択ロジック（通常 / 眠気）
-public/about.html   # 人に見せる用の説明ページ（/about）。素の HTML、直接編集する
+public/about/index.html  # 人に見せる用の説明ページ（/about）。素の HTML、直接編集する
+src-tauri/          # デスクトップアプリの殻（Tauri）。設定は tauri.conf.json
 ```
 
 ## 状態
@@ -45,6 +54,7 @@ P1〜P5 実装済み。
 - P4 累積カウンタ・完了時のランダム一言
 - P5 定番・いったんやめる `P`・カウントアップ化・PWA 化
 - 名言 — からっぽ画面と完了直後にランダム表示（`lib/quotes.ts`）
+- デスクトップアプリ化（Tauri）— サーバも黒い窓も要らなくなった
 
 出るのは **古い順の先頭 1 件**。抽選も 重要度ソートも しない。
 気が乗らなければ `P` で送る。送った分は溜まるので 押すたび違うものが出る。

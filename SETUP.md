@@ -4,6 +4,8 @@
 
 ## 1. 必要な環境
 
+デスクトップアプリ（Tauri）としてビルドするので、Web だけの頃より前提が増えている。
+
 - **Node**（動作確認済み: v26.5.0 / npm 11.17.0、v24.18.0 / npm 11.16.0）
   - 条件は「**フラグなしで `.ts` を直接実行できる Node**」。古い Node だと `npm test` が落ちる。
     テストは追加依存なしで動かすため **Node の TypeScript 直接実行**（型ストリップ）に
@@ -11,9 +13,27 @@
   - `tsconfig.json` の `allowImportingTsExtensions: true` も同じ理由。テストが `./select.ts` と
     拡張子付きで import するため。消すな
 - git
-- ブラウザ（Chrome / Edge。localhost で動けば何でも可）
+- **Rust**（動作確認済み: rustc / cargo 1.98.1）
 
-Windows / macOS / Linux どれでも可。OS 依存コードなし。
+  ```
+  winget install --id Rustlang.Rustup -e
+  ```
+
+  入れた直後、**開いたままのターミナルには PATH が反映されない**。新しいターミナルを開く。
+  それでも `cargo` が見つからないときは `%USERPROFILE%\.cargo\bin` を PATH に足す
+- **Microsoft C++ Build Tools**（Rust の Windows リンカ。MSVC）
+
+  ```
+  winget install --id Microsoft.VisualStudio.2022.BuildTools -e --override "--quiet --wait --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+  ```
+
+  ディスク **~5GB**、インストールに十数分かかる。`--add Microsoft.VisualStudio.Workload.VCTools`
+  （= 「C++ によるデスクトップ開発」）が本体。これが無いと `cargo build` がリンクで落ちる
+- **WebView2** — Windows 11 はプリインストール済み。何もしなくていい。
+  Windows 10 以前なら Tauri の生成するインストーラが面倒を見る
+- ブラウザ（開発時のみ。Chrome / Edge）
+
+macOS / Linux でもビルドできる構成だが、確認していない。
 
 ## 2. セットアップ
 
@@ -23,63 +43,52 @@ Windows / macOS / Linux どれでも可。OS 依存コードなし。
 gh repo clone N-Hayashi-v8/yaruzo
 cd yaruzo
 npm install
+```
+
+### 2-1. アプリとして入れる（普段使う形）
+
+```
+npm run tauri build
+```
+
+`src-tauri/target/release/bundle/nsis/やるぞ！_0.1.0_x64-setup.exe` が出る。
+これを実行するとスタートメニューに「やるぞ！」が入る。**普段の起動はここから**。
+
+初回ビルドは Rust の依存を全部コンパイルするので数分かかる。2 回目以降はキャッシュが効く。
+
+インストーラを通さず素の実行ファイルを直接叩いてもいい:
+`src-tauri/target/release/yaruzo.exe`（8MB 台）。スタートメニューには入らない。
+
+### 2-2. 開発する
+
+```
 npm run dev
 ```
 
-→ `http://localhost:3000`
+→ `http://localhost:3000` をブラウザで開く。保存で即反映。**画面を作るときはこれが速い**。
 
-Windows なら **`yaruzo.bat` をダブルクリック**でいい。
-`node_modules` が無ければ `npm install`、続けて `npm run build` を流し、本番サーバを起動して
-数秒後にブラウザのタブで `http://localhost:3000` を開く。止めるのはその窓で `Ctrl+C`。
-
-`yaruzo.bat` は**インストールと更新の確認用**。普段の起動には使わない（→ 3-1）。
-開発するときは `npm run dev`（ビルドを挟まず、保存で即反映される）。
-
-### アプリとしてインストールする（推奨）
-
-インストールしておくとスタートメニューやタスクバーから起動できる。
-さらに Service Worker がキャッシュを持つので、**2 回目以降は `yaruzo.bat` すら要らない**（→ 3-1）。
-
-1. `yaruzo.bat` を起動する（サーバが動いていないとインストールできない）
-2. 開いたタブのアドレスバー右端にあるインストールアイコン
-   （Edge なら「…」→ アプリ → このサイトをアプリとしてインストール）
-3. スタートメニューに「やるぞ！」が入る。タスクバーにピン留めもできる
-
-インストールした PWA と、ブラウザのタブで開いた `http://localhost:3000` は別インスタンス。
-アイコンもタスクバーの扱いも別になる。**普段使うのはインストールしたほう**。
-
-### 3-1. サーバなしで起動する（Service Worker）
-
-`public/sw.js` が、一度読み込んだページとスクリプトをブラウザのキャッシュに貯める。
-サーバに繋がらないときはそこから返すので、**`yaruzo.bat` を起動しなくてもアプリが立ち上がる**。
-
-- 普段: スタートメニューの「やるぞ！」だけ。黒い窓は不要
-- コードを更新したあと 1 回だけ: `yaruzo.bat` を起動して開いたタブを読み込む。
-  キャッシュが最新に入れ替わる（ネットワーク優先なので、サーバが動いていれば常に最新が出る）
-
-Service Worker は本番ビルドでしか登録しない（`npm run dev` では古いバンドルが返って開発が壊れるため）。
-
-### アイコンを差し替えたとき
-
-アイコンはインストールした時点のものが OS 側（スタートメニューのショートカット）に焼き込まれる。
-PNG を差し替えただけでは変わらないので、入れ直す。
-
-1. `app/manifest.ts` の `?v=` の数字を 1 つ上げる。
-   これを忘れるとブラウザが古い PNG をキャッシュから使い、入れ直しても前のアイコンのまま
-2. `chrome://apps`（Edge は `edge://apps`）で「やるぞ！」を右クリック → 削除。
-   **削除ダイアログの「データも消去する」は必ずチェックを外す**。入れるとタスク履歴が消える
-3. `yaruzo.bat` を起動し、通常のタブで `http://localhost:3000` を開いて `Ctrl+Shift+R`
-4. インストールし直す
-
-`gh` が無い環境なら:
+アプリの窓ごと動かして確かめたいときは:
 
 ```
-git clone https://github.com/N-Hayashi-v8/yaruzo.git
+npm run tauri dev
 ```
 
-private のため認証が要る。`gh auth login`（HTTPS / Authenticate Git with your GitHub credentials は Yes）を
-先に通しておくのが早い。Windows で `gh` が PATH に出てこない場合はフルパスで叩く:
-`& "C:\Program Files\GitHub CLI\gh.exe" auth login`
+Next の開発サーバを立てて、その中身を Tauri の窓に出す。保存で反映されるのは同じ。
+ただし Rust 側のビルドを挟むぶん起動が重い。
+
+### 2-3. アイコンを差し替えたとき
+
+元データは `public/icon-512.png`。ここを差し替えたら:
+
+```
+npx tauri icon public/icon-512.png
+```
+
+`src-tauri/icons/` の各サイズが作り直される。モバイル用（`android/` `ios/`）も生成されるが
+このアプリでは使わないので消していい。あとは `npm run tauri build` で入れ直す。
+
+`app/manifest.ts` の `?v=` は **Vercel に載せた web 版の PWA 用**。
+デスクトップ版のアイコンには関係しない。
 
 ## 3. 動作確認
 
@@ -96,12 +105,13 @@ Next.js が `.next/types/` に自動生成する型で、clone 直後（`.next/`
 
 ## 4. git 管理外で、手で運ぶ必要があるもの
 
-`.gitignore` は create-next-app 既定のまま。中身の大半は **再生成できる** ので運ばなくていい。
+`.gitignore` は create-next-app 既定 + `src-tauri/.gitignore`。中身の大半は **再生成できる**。
 
 再生成でいいもの（無視してよい）:
 
 - `node_modules/` → `npm install`
-- `.next/`, `out/`, `build/` → `npm run build`
+- `.next/`, `out/` → `npm run build`
+- `src-tauri/target/` → `npm run tauri build`（初回は数分かかる）
 - `next-env.d.ts` → `npm run dev` / `build` が自動生成
 - `*.tsbuildinfo`, `coverage/`, `.vercel`
 
@@ -109,22 +119,37 @@ Next.js が `.next/types/` に自動生成する型で、clone 直後（`.next/`
 
 ### 4-1. タスクデータ（最重要）
 
-データは **ブラウザの localStorage**。git にもファイルにも存在しない。
-PC を変えると **タスクは 1 件も引き継がれない**。
+データは **WebView の IndexedDB**（`lib/store.ts`。DB 名 `yaruzo` / キー `task-app-v1`）。
+git にもプロジェクトのファイルにも存在しない。**PC を変えるとタスクは 1 件も引き継がれない。**
 
-移行するなら、旧 PC のブラウザで `http://localhost:3000` を開き、DevTools コンソール（F12）で:
+デスクトップ版の実体はここ:
 
-```js
-copy(localStorage.getItem('task-app-v1'))   // クリップボードにコピー
+```
+%LOCALAPPDATA%\app.yaruzo.desktop\EBWebView\Default\IndexedDB\
 ```
 
-新 PC のブラウザで `http://localhost:3000` を開き、コンソールで:
+**オリジンごとに別の入れ物になる。** デスクトップ版は `http://tauri.localhost`、
+web 版（Vercel / `localhost:3000`）はそれぞれ別。**web 版で溜めたタスクは自動では移らない。**
+
+移すなら、移行元で DevTools のコンソール（F12）から:
 
 ```js
-localStorage.setItem('task-app-v1', `ここに貼る`); location.reload();
+copy(JSON.stringify(await new Promise((ok) => {
+  const r = indexedDB.open('yaruzo', 1);
+  r.onsuccess = () => r.result.transaction('store').objectStore('store').get('task-app-v1').onsuccess = (e) => ok(e.target.result);
+})))
 ```
 
-キー名は `task-app-v1`（`lib/store.ts` で定義）。
+移行先のコンソールで:
+
+```js
+const data = ここに貼る;
+const r = indexedDB.open('yaruzo', 1);
+r.onsuccess = () => r.result.transaction('store', 'readwrite').objectStore('store').put(data, 'task-app-v1').onsuccess = () => location.reload();
+```
+
+デスクトップ版で DevTools を開くには **debug ビルドが要る**（`npm run tauri dev` の窓なら
+右クリック → 検証、または F12）。リリースビルドの窓では開かない。
 
 要らないなら移行しなくていい。空で始まる。
 
@@ -137,14 +162,17 @@ localStorage.setItem('task-app-v1', `ここに貼る`); location.reload();
 
 - リモート: `origin` = <https://github.com/N-Hayashi-v8/yaruzo>（private）
 - 既定ブランチ: `main`
-- P1〜P4 + UI（ブルータリスト方向）までコミット済み・push 済み
+- P1〜P5 + デスクトップアプリ化（Tauri）までコミット済み・push 済み
+
+Vercel への web 版デプロイは残している。`public/about/index.html` を `/about` で人に見せるため。
+`output: "export"` にしたので Vercel も静的サイトとして配信する。
 
 リポジトリ名は `ter` → `tsugi` → `yaruzo` と 2 回リネームしている。
 旧 URL は GitHub がリダイレクトするが、新しく書くときは `yaruzo` を使う。
 
 **ローカルのフォルダ名は git 管理外。** クローン先が `tsugi` のままでも動く。
-揃えたいなら開発サーバを止めてから手で `yaruzo` にリネームし、`.next/` を消す
-（絶対パスがキャッシュに残る）。`npm run dev` が作り直す。
+揃えたいなら開発サーバを止めてから手で `yaruzo` にリネームし、`.next/` と
+`src-tauri/target/` を消す（絶対パスがキャッシュに残る）。次のビルドが作り直す。
 
 ## 6. 読む順番
 

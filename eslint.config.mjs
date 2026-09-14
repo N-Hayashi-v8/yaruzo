@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Tauri のビルド生成物。target/ に埋め込み用の .js が出るので eslint から外す
+    "src-tauri/**",
   ]),
 ]);
 

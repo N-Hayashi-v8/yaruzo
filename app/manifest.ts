@@ -1,5 +1,9 @@
 import type { MetadataRoute } from "next";
 
+// output: "export" ではルートハンドラも静的に吐く指定が要る。
+// 付けないと「manifest.webmanifest に force-static が無い」でビルドが落ちる
+export const dynamic = "force-static";
+
 /** PWA マニフェスト。ブラウザから「インストール」するとタブのない独立窓で開く */
 export default function manifest(): MetadataRoute.Manifest {
   return {

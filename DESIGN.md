@@ -78,7 +78,7 @@ export type Store = {
 }
 ```
 
-localStorage キー: `task-app-v1`。単一キーに `Store` を JSON 格納。
+IndexedDB に置く。DB 名 `yaruzo` / ストア `store` / キー `task-app-v1`。単一キーに `Store` を丸ごと格納。
 `presets` を持たない古いデータでも起動できるよう、`load()` で 無い配列は空に埋める。
 
 ## 3. 画面
@@ -226,13 +226,16 @@ P1 が動かないうちに P2 以降 着手 禁止。
 ```
 app/page.tsx        # NOW + オーバーレイ全部
 lib/types.ts        # 型定義
-lib/store.ts        # localStorage 読み書き 集約
+lib/store.ts        # IndexedDB 読み書き 集約
 lib/select.ts       # 次タスク選択ロジック（古い順 / 眠気 / やめた分の除外）
 lib/quotes.ts       # 名言データ（からっぽ用 / 完了用）
-public/about.html   # 人に見せる用の説明ページ（/about）
+public/about/index.html  # 人に見せる用の説明ページ（/about）
+src-tauri/          # デスクトップアプリの殻（Tauri）
 ```
 
-`public/about.html` は **素の HTML**。React を通さない。
+`public/about/index.html` は **素の HTML**。React を通さない。
+ディレクトリを切ってあるのは `output: "export"` で `rewrites()` が使えないため。
+この置き方なら Vercel でも Tauri でも パスだけで `/about` に解決する。
 アプリの中身とは関係のない、外向けの説明だけを置く場所なので、
 JSX にせず 直接 手で直せる形にしてある。デザインの token は
 `app/globals.css` と同じものを 手で写している（アプリと同じ顔にするため）。
@@ -264,4 +267,4 @@ NOW 画面から `/about` への導線は **張らない**。1画面 の原則�
 ## 8. 未決
 
 - ~~LLM プロバイダとキー管理~~ → 決着。LLM は使わない（上の分解を参照）
-- body doubling 相当をどうするか。他人が要る機能 → localStorage 前提と衝突。P4 以降で再検討
+- body doubling 相当をどうするか。他人が要る機能 → ローカル保存 前提と衝突。P4 以降で再検討
