@@ -1,0 +1,18 @@
+{
+  "productName": "やるぞ！(テスト)",
+  "identifier": "app.yaruzo.desktop.test",
+  "app": {
+    "windows": [
+      {
+        "title": "やるぞ！(テスト)",
+        "width": 1100,
+        "height": 800,
+        "minWidth": 480,
+        "minHeight": 560,
+        "center": true,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ]
+  }
+}

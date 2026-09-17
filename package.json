@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "tauri": "tauri",
+    "tauri:build:test": "tauri build --config src-tauri/tauri.test.conf.json",
     "lint": "eslint",
     "test": "node --test lib/*.test.ts"
   },
