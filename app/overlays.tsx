@@ -72,13 +72,13 @@ export function EstimateGrip({
 function Overlay({ onClose, children }: { onClose: () => void; children: ReactNode }) {
   return (
     <div
-      className="anim-fade fixed inset-0 flex items-start justify-center overflow-y-auto bg-[rgba(22,19,15,0.74)] p-4 pt-16 sm:p-6 sm:pt-24"
+      className="anim-fade fixed inset-0 flex items-start justify-center overflow-y-auto bg-[rgba(22,19,15,0.74)] p-3 pt-6 sm:p-6 sm:pt-24"
       onClick={onClose}
     >
       {/* 出るときだけ動かす。閉じるのは作業に戻る瞬間なので即消す（globals.css） */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="anim-unfold flex w-full max-w-4xl flex-col gap-5 border-[6px] border-foreground bg-background p-6 shadow-[16px_16px_0_var(--accent)] sm:p-8"
+        className="anim-unfold flex w-full max-w-4xl flex-col gap-4 border-[6px] border-foreground bg-background p-4 shadow-[16px_16px_0_var(--accent)] sm:gap-5 sm:p-8"
       >
         {children}
       </div>
@@ -174,9 +174,9 @@ export function AddOverlay({
           if (e.key === "Enter" && !e.nativeEvent.isComposing) onAdd();
           if (e.key === "Escape") onClose();
         }}
-        className="w-full border-[5px] border-foreground bg-background px-5 py-4 text-2xl font-bold outline-none placeholder:text-current placeholder:opacity-35 sm:text-4xl"
+        className="w-full border-[5px] border-foreground bg-background px-4 py-3 text-xl font-bold outline-none placeholder:text-current placeholder:opacity-35 sm:px-5 sm:py-4 sm:text-4xl"
       />
-      <div className="flex flex-wrap items-center gap-4 border-t-4 border-foreground pt-5">
+      <div className="flex flex-wrap items-center gap-3 border-t-4 border-foreground pt-4 sm:gap-4 sm:pt-5">
         <button
           onClick={onAdd}
           className="flex min-h-14 items-center gap-3 border-4 border-foreground bg-accent px-6 py-3 text-lg font-bold text-on-accent shadow-[8px_8px_0_var(--color-foreground)]"
@@ -484,7 +484,7 @@ export function TodayOverlay({
               type="time"
               value={wakeAt}
               onChange={(e) => onWake(e.target.value)}
-              className="w-full border-4 border-foreground bg-background px-2 py-1.5 font-mono text-2xl font-black outline-none"
+              className="w-full min-w-0 border-4 border-foreground bg-background px-2 py-1.5 font-mono text-xl leading-tight font-black outline-none sm:text-2xl"
             />
             <span className="text-[13px] font-bold opacity-60">毎日おなじ時刻に寄せる</span>
           </div>
@@ -534,7 +534,7 @@ export function TodayOverlay({
             value={at}
             onChange={(e) => setAt(e.target.value)}
             aria-label="時刻"
-            className="border-4 border-foreground bg-background px-2 py-1.5 font-mono text-xl font-black outline-none"
+            className="flex-shrink-0 border-4 border-foreground bg-background px-2 py-1.5 font-mono text-lg leading-tight font-black outline-none sm:text-xl"
           />
           <input
             value={what}
@@ -545,7 +545,7 @@ export function TodayOverlay({
               if (e.key === "Escape") onClose();
             }}
             aria-label="約束の内容"
-            className="min-w-0 flex-1 border-4 border-foreground bg-background px-4 py-2 text-xl font-bold outline-none placeholder:text-current placeholder:opacity-35"
+            className="min-w-[10rem] flex-1 border-4 border-foreground bg-background px-4 py-2 text-xl font-bold outline-none placeholder:text-current placeholder:opacity-35"
           />
           <button
             onClick={put}

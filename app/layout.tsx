@@ -1,5 +1,11 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
+
+// iOS のキーボード表示時、fixed 要素がレイアウトビューポートに固定されたままで
+// URL バーやキーボードと重なる。resizes-content でキーボード分もビューポートを縮める
+export const viewport: Viewport = {
+  interactiveWidget: "resizes-content",
+};
 
 export const metadata: Metadata = {
   title: "やるぞ！",

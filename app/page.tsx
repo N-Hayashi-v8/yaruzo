@@ -534,7 +534,7 @@ export default function Home() {
                 からっぽ。
               </h1>
               <div className="flex items-center gap-5">
-                <span className="h-2.5 w-44 border-[3px] border-current bg-accent" />
+                <span className="h-2.5 w-10 flex-shrink-0 border-[3px] border-current bg-accent sm:w-44" />
                 <span className="text-lg font-bold">やること なし。それでいい。</span>
               </div>
               {/* 何もしていない状態を肯定する言葉だけ置く。ここで急かすと罪悪感になる */}
