@@ -4,6 +4,15 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "やるぞ！",
   description: "次の1個だけ",
+  // iOS Safari は manifest.ts の icons を見ない。ホーム画面追加用に別途必要
+  appleWebApp: {
+    capable: true,
+    title: "やるぞ！",
+    statusBarStyle: "default",
+  },
+  icons: {
+    apple: "/icon-192.png?v=2",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
