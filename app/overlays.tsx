@@ -185,7 +185,9 @@ export function AddOverlay({
             <path d="M4 12h14M13 6l6 6-6 6" />
           </svg>
           入れる
-          <span className="border-2 border-current px-1.5 py-0.5 font-mono text-xs">ENTER</span>
+          <span className="hidden border-2 border-current px-1.5 py-0.5 font-mono text-xs lg:inline">
+            ENTER
+          </span>
         </button>
         {/* 何度もやることだと気づいた時に、その場で定番へ送れる */}
         <button
@@ -200,7 +202,7 @@ export function AddOverlay({
           onMin={onMin}
           className="border-[3px] border-current px-3.5 py-1.5 text-[15px] font-bold"
         />
-        <span className="font-mono text-[13px] font-bold opacity-60">ESC 閉じる</span>
+        <span className="hidden font-mono text-[13px] font-bold opacity-60 lg:inline">ESC 閉じる</span>
       </div>
     </Overlay>
   );
@@ -270,7 +272,9 @@ export function SplitOverlay({
             <path d="M12 3v6M12 9L5 15v6M12 9l7 6v6" />
           </svg>
           割る
-          <span className="border-2 border-current px-1.5 py-0.5 font-mono text-xs">ENTER</span>
+          <span className="hidden border-2 border-current px-1.5 py-0.5 font-mono text-xs lg:inline">
+            ENTER
+          </span>
         </button>
       </div>
     </Overlay>

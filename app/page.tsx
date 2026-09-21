@@ -98,17 +98,20 @@ type DoneMotion = (typeof DONE_MOTIONS)[number];
 
 type OverlayName = "add" | "split" | "sleepy" | "today";
 
-/** フッターのボタン。アイコン + ラベル。タッチだけの端末が主なので PC のキー表示はしない */
+/**
+ * フッターのボタン。アイコン + ラベルは常に出す（タッチ操作が主）。
+ * キー表示は PC 幅（lg 以上）でだけ添える
+ */
 function HintButton({
   icon,
+  keyLabel,
   label,
-  shortcut,
   onClick,
   disabled = false,
 }: {
   icon: ReactNode;
+  keyLabel: string;
   label: string;
-  shortcut: string;
   onClick: () => void;
   disabled?: boolean;
 }) {
@@ -116,11 +119,14 @@ function HintButton({
     <button
       onClick={onClick}
       disabled={disabled}
-      aria-keyshortcuts={shortcut}
+      aria-keyshortcuts={keyLabel.toLowerCase()}
       className="flex min-h-11 items-center gap-1.5 px-2 whitespace-nowrap hover:bg-background hover:text-foreground active:bg-accent active:text-on-accent disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-current"
     >
       {icon}
       <span>{label}</span>
+      <span className="hidden border-2 border-current px-1.5 py-0.5 text-[11px] lg:inline">
+        {keyLabel}
+      </span>
     </button>
   );
 }
@@ -485,6 +491,9 @@ export default function Home() {
                     )}
                   </svg>
                   {running ? "一時停止" : "開始"}
+                  <span className="hidden border-2 border-current px-1.5 py-0.5 font-mono text-xs opacity-75 lg:inline">
+                    SPACE
+                  </span>
                 </button>
                 <button
                   onClick={complete}
@@ -494,6 +503,9 @@ export default function Home() {
                     <path d="M4 13l6 6L21 5" />
                   </svg>
                   完了
+                  <span className="hidden border-2 border-current px-1.5 py-0.5 font-mono text-xs opacity-75 lg:inline">
+                    ENTER
+                  </span>
                 </button>
                 {/*
                   レイアウトから外して浮かせる。行の中に置くと、出るときと 3.6 秒後に消えるときの
@@ -544,6 +556,9 @@ export default function Home() {
                   <path d="M12 5v14M5 12h14" />
                 </svg>
                 追加する
+                <span className="hidden border-2 border-current px-2 py-1 font-mono text-[13px] lg:inline">
+                  N
+                </span>
               </button>
             </>
           )}
@@ -626,7 +641,7 @@ export default function Home() {
       </div>
 
       {/* キーが押せない環境（スマホ）でも同じ操作ができるよう、ヒントはそのままボタン。
-          アイコンで示す（PC のキー表示は要らない。ショートカット自体は onKey に残る） */}
+          常にアイコンで示し、キー表示は PC 幅（lg 以上）でだけ添える */}
       <footer className="flex min-h-[54px] flex-shrink-0 items-center gap-1 overflow-x-auto bg-foreground px-3 font-mono text-[13px] font-bold tracking-[0.06em] text-background sm:gap-2 sm:px-5">
         <HintButton
           icon={
@@ -635,7 +650,7 @@ export default function Home() {
             </svg>
           }
           label="開始/停止"
-          shortcut="space"
+          keyLabel="SPACE"
           onClick={toggle}
           disabled={!task}
         />
@@ -646,7 +661,7 @@ export default function Home() {
             </svg>
           }
           label="完了"
-          shortcut="enter"
+          keyLabel="ENTER"
           onClick={complete}
           disabled={!task}
         />
@@ -657,7 +672,7 @@ export default function Home() {
             </svg>
           }
           label="追加"
-          shortcut="n"
+          keyLabel="N"
           onClick={() => setOverlay("add")}
         />
         <HintButton
@@ -667,7 +682,7 @@ export default function Home() {
             </svg>
           }
           label="やめる"
-          shortcut="p"
+          keyLabel="P"
           onClick={pass}
           disabled={!stored || body !== null}
         />
@@ -678,7 +693,7 @@ export default function Home() {
             </svg>
           }
           label="分解"
-          shortcut="d"
+          keyLabel="D"
           onClick={() => setOverlay("split")}
           disabled={!stored || body !== null}
         />
@@ -689,7 +704,7 @@ export default function Home() {
             </svg>
           }
           label="眠い"
-          shortcut="s"
+          keyLabel="S"
           onClick={() => setOverlay("sleepy")}
         />
         <HintButton
@@ -699,7 +714,7 @@ export default function Home() {
             </svg>
           }
           label="今日"
-          shortcut="t"
+          keyLabel="T"
           onClick={() => openToday()}
         />
       </footer>
