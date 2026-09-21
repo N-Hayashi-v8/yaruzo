@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import {
   addPlan,
@@ -98,15 +98,17 @@ type DoneMotion = (typeof DONE_MOTIONS)[number];
 
 type OverlayName = "add" | "split" | "sleepy" | "today";
 
-/** フッターのキーヒント。押せる（タッチだけの端末でも操作できる） */
+/** フッターのボタン。アイコン + ラベル。タッチだけの端末が主なので PC のキー表示はしない */
 function HintButton({
-  keyLabel,
+  icon,
   label,
+  shortcut,
   onClick,
   disabled = false,
 }: {
-  keyLabel: string;
+  icon: ReactNode;
   label: string;
+  shortcut: string;
   onClick: () => void;
   disabled?: boolean;
 }) {
@@ -114,10 +116,10 @@ function HintButton({
     <button
       onClick={onClick}
       disabled={disabled}
-      aria-keyshortcuts={keyLabel.toLowerCase()}
+      aria-keyshortcuts={shortcut}
       className="flex min-h-11 items-center gap-1.5 px-2 whitespace-nowrap hover:bg-background hover:text-foreground active:bg-accent active:text-on-accent disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-current"
     >
-      <span className="border-2 border-current px-1.5 py-0.5 text-[11px]">{keyLabel}</span>
+      {icon}
       <span>{label}</span>
     </button>
   );
@@ -630,20 +632,83 @@ export default function Home() {
         </aside>
       </div>
 
-      {/* キーが押せない環境（スマホ）でも同じ操作ができるよう、ヒントはそのままボタン */}
+      {/* キーが押せない環境（スマホ）でも同じ操作ができるよう、ヒントはそのままボタン。
+          アイコンで示す（PC のキー表示は要らない。ショートカット自体は onKey に残る） */}
       <footer className="flex min-h-[54px] flex-shrink-0 items-center gap-1 overflow-x-auto bg-foreground px-3 font-mono text-[13px] font-bold tracking-[0.06em] text-background sm:gap-2 sm:px-5">
-        <HintButton keyLabel="SPACE" label="開始/停止" onClick={toggle} disabled={!task} />
-        <HintButton keyLabel="ENTER" label="完了" onClick={complete} disabled={!task} />
-        <HintButton keyLabel="N" label="追加" onClick={() => setOverlay("add")} />
-        <HintButton keyLabel="P" label="やめる" onClick={pass} disabled={!stored || body !== null} />
         <HintButton
-          keyLabel="D"
+          icon={
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" aria-hidden>
+              {running ? <path d="M6 4h4v16H6zM14 4h4v16h-4z" /> : <path d="M6 3l14 9-14 9z" />}
+            </svg>
+          }
+          label="開始/停止"
+          shortcut="space"
+          onClick={toggle}
+          disabled={!task}
+        />
+        <HintButton
+          icon={
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M4 13l6 6L21 5" />
+            </svg>
+          }
+          label="完了"
+          shortcut="enter"
+          onClick={complete}
+          disabled={!task}
+        />
+        <HintButton
+          icon={
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" aria-hidden>
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          }
+          label="追加"
+          shortcut="n"
+          onClick={() => setOverlay("add")}
+        />
+        <HintButton
+          icon={
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M5 6l6 6-6 6M13 6l6 6-6 6" />
+            </svg>
+          }
+          label="やめる"
+          shortcut="p"
+          onClick={pass}
+          disabled={!stored || body !== null}
+        />
+        <HintButton
+          icon={
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M12 3v6M12 9L5 15v6M12 9l7 6v6" />
+            </svg>
+          }
           label="分解"
+          shortcut="d"
           onClick={() => setOverlay("split")}
           disabled={!stored || body !== null}
         />
-        <HintButton keyLabel="S" label="眠い" onClick={() => setOverlay("sleepy")} />
-        <HintButton keyLabel="T" label="今日" onClick={() => openToday()} />
+        <HintButton
+          icon={
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+            </svg>
+          }
+          label="眠い"
+          shortcut="s"
+          onClick={() => setOverlay("sleepy")}
+        />
+        <HintButton
+          icon={
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M4 5h16v15H4ZM8 3v4M16 3v4M4 10h16" />
+            </svg>
+          }
+          label="今日"
+          shortcut="t"
+          onClick={() => openToday()}
+        />
       </footer>
 
       {overlay === "add" && (
