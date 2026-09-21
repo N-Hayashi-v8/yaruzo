@@ -346,29 +346,29 @@ export function SleepyOverlay({
         </>
       ) : (
         <>
-          <p className="font-display text-3xl leading-tight sm:text-4xl">
+          <p className="font-display text-2xl leading-tight sm:text-4xl">
             面白いタスク なし。
             <br />
             体を 動かす。
           </p>
-          <div className="flex flex-col gap-4 sm:flex-row">
+          <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
             {BODY_TASKS.map((b, i) => (
               <button
                 key={b.id}
                 onClick={() => onPickBody(b)}
-                className={`flex min-h-[120px] flex-1 flex-col items-start gap-2.5 border-[5px] border-foreground px-5 py-5 shadow-[8px_8px_0_var(--color-foreground)] ${
+                className={`flex flex-1 items-center gap-3 border-[5px] border-foreground px-4 py-3 shadow-[8px_8px_0_var(--color-foreground)] sm:min-h-[120px] sm:flex-col sm:items-start sm:gap-2.5 sm:px-5 sm:py-5 ${
                   i === 0 ? "bg-accent text-on-accent" : ""
                 }`}
               >
-                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <svg className="h-7 w-7 flex-shrink-0 sm:h-[34px] sm:w-[34px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                   {b.id === "body:walk" && (
                     <path d="M13 4.5a1 1 0 100-.1M11 21l2-6-3-3 1-5 4 3 3 1M10 12l-3 2-2 5" />
                   )}
                   {b.id === "body:water" && <path d="M6 4h12l-1.5 16h-9zM7 10h10" />}
                   {b.id === "body:face" && <path d="M4 13a8 8 0 0116 0M8 17h8M12 3v3" />}
                 </svg>
-                <span className="text-2xl font-black">{b.title}</span>
-                <span className="font-mono text-[17px] font-bold">{b.estimateMin}分</span>
+                <span className="text-lg font-black sm:text-2xl">{b.title}</span>
+                <span className="font-mono text-sm font-bold sm:text-[17px]">{b.estimateMin}分</span>
               </button>
             ))}
           </div>
