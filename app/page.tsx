@@ -485,9 +485,6 @@ export default function Home() {
                     )}
                   </svg>
                   {running ? "一時停止" : "開始"}
-                  <span className="border-2 border-current px-1.5 py-0.5 font-mono text-xs opacity-75">
-                    SPACE
-                  </span>
                 </button>
                 <button
                   onClick={complete}
@@ -497,9 +494,6 @@ export default function Home() {
                     <path d="M4 13l6 6L21 5" />
                   </svg>
                   完了
-                  <span className="border-2 border-current px-1.5 py-0.5 font-mono text-xs opacity-75">
-                    ENTER
-                  </span>
                 </button>
                 {/*
                   レイアウトから外して浮かせる。行の中に置くと、出るときと 3.6 秒後に消えるときの
@@ -550,7 +544,6 @@ export default function Home() {
                   <path d="M12 5v14M5 12h14" />
                 </svg>
                 追加する
-                <span className="border-2 border-current px-2 py-1 font-mono text-[13px]">N</span>
               </button>
             </>
           )}
