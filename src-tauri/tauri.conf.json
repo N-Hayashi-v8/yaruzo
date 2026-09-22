@@ -14,9 +14,9 @@
       {
         "title": "やるぞ！",
         "width": 1100,
-        "height": 800,
+        "height": 920,
         "minWidth": 480,
-        "minHeight": 560,
+        "minHeight": 640,
         "center": true,
         "resizable": true,
         "fullscreen": false
