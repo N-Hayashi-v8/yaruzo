@@ -72,7 +72,7 @@ export function EstimateGrip({
 function Overlay({ onClose, children }: { onClose: () => void; children: ReactNode }) {
   return (
     <div
-      className="anim-fade fixed inset-0 flex items-start justify-center overflow-y-auto bg-[rgba(22,19,15,0.74)] p-3 pt-6 sm:p-6 sm:pt-24"
+      className="anim-fade fixed inset-0 flex items-start justify-center overflow-y-auto bg-[rgba(22,19,15,0.74)] p-3 pt-6 sm:p-6 sm:pt-10"
       onClick={onClose}
     >
       {/* 出るときだけ動かす。閉じるのは作業に戻る瞬間なので即消す（globals.css） */}
@@ -455,26 +455,28 @@ export function TodayOverlay({
             <span className="font-display text-6xl leading-none">{done.length}</span>
             <span className="pb-2 text-lg font-black">件 片付いた</span>
           </div>
-          {done.length === 0 ? (
-            <p className="py-6 text-lg font-bold opacity-60">まだ ゼロ。それだけ。</p>
-          ) : (
-            done.map((t) => (
-              <div
-                key={t.id}
-                className="flex items-center gap-3 border-[3px] border-foreground px-3 py-2"
-              >
-                <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center border-[3px] border-foreground bg-accent">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--on-accent)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <path d="M4 13l6 6L21 5" />
-                  </svg>
-                </span>
-                <span className="flex-1 text-lg font-black">{t.title}</span>
-                <span className="font-mono text-sm font-bold opacity-65">
-                  {hhmm(t.completedAt ?? 0)}
-                </span>
-              </div>
-            ))
-          )}
+          <div className="flex flex-col gap-2.5 sm:max-h-[45vh] sm:overflow-y-auto sm:pr-1">
+            {done.length === 0 ? (
+              <p className="py-6 text-lg font-bold opacity-60">まだ ゼロ。それだけ。</p>
+            ) : (
+              done.map((t) => (
+                <div
+                  key={t.id}
+                  className="flex items-center gap-3 border-[3px] border-foreground px-3 py-2"
+                >
+                  <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center border-[3px] border-foreground bg-accent">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--on-accent)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M4 13l6 6L21 5" />
+                    </svg>
+                  </span>
+                  <span className="flex-1 text-lg font-black">{t.title}</span>
+                  <span className="font-mono text-sm font-bold opacity-65">
+                    {hhmm(t.completedAt ?? 0)}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
         </div>
 
         <div className="flex flex-col gap-3.5">
