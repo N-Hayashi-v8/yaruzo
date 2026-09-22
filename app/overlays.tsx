@@ -72,7 +72,7 @@ export function EstimateGrip({
 function Overlay({ onClose, children }: { onClose: () => void; children: ReactNode }) {
   return (
     <div
-      className="anim-fade fixed inset-0 flex items-start justify-center overflow-y-auto bg-[rgba(22,19,15,0.74)] p-3 pt-6 sm:p-6 sm:pt-10"
+      className="anim-fade fixed inset-0 flex items-start justify-center overflow-y-auto bg-[rgba(22,19,15,0.74)] px-3 pt-8 pb-16 sm:px-6 sm:pt-12 sm:pb-20"
       onClick={onClose}
     >
       {/* 出るときだけ動かす。閉じるのは作業に戻る瞬間なので即消す（globals.css） */}
@@ -455,7 +455,7 @@ export function TodayOverlay({
             <span className="font-display text-6xl leading-none">{done.length}</span>
             <span className="pb-2 text-lg font-black">件 片付いた</span>
           </div>
-          <div className="flex flex-col gap-2.5 sm:max-h-[45vh] sm:overflow-y-auto sm:pr-1">
+          <div className="flex max-h-[38vh] flex-col gap-2.5 overflow-y-auto pr-1 sm:max-h-[45vh]">
             {done.length === 0 ? (
               <p className="py-6 text-lg font-bold opacity-60">まだ ゼロ。それだけ。</p>
             ) : (
