@@ -37,8 +37,14 @@ const display = Dela_Gothic_One({
 
 // iOS のキーボード表示時、fixed 要素がレイアウトビューポートに固定されたままで
 // URL バーやキーボードと重なる。resizes-content でキーボード分もビューポートを縮める
+//
+// viewport-fit=cover は ホーム画面から開いたとき（standalone）用。
+// これが無いと env(safe-area-inset-*) が全部 0 になり、下端の操作札が
+// ホームインジケータのスワイプ領域に食い込む。cover にすると上下左右の余白を
+// 自分で持つことになるので、header / footer / オーバーレイの 3 箇所で env() を足している
 export const viewport: Viewport = {
   interactiveWidget: "resizes-content",
+  viewportFit: "cover",
 };
 
 export const metadata: Metadata = {

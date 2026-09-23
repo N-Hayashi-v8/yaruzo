@@ -121,7 +121,9 @@ function Overlay({
   const id = useId();
   return (
     <div
-      className="anim-fade fixed inset-0 flex items-start justify-center overflow-y-auto bg-[rgba(22,19,15,0.74)] px-3 pt-8 pb-16 sm:px-6 sm:pt-12 sm:pb-20"
+      // fixed inset-0 = 画面ぜんぶ。viewport-fit=cover なので ノッチ・ホームインジケータの
+      // 下まで伸びる。上下の余白に env() を足して、× と中身をそこへ入れない
+      className="anim-fade fixed inset-0 flex items-start justify-center overflow-y-auto bg-[rgba(22,19,15,0.74)] px-3 pt-[calc(2rem_+_env(safe-area-inset-top))] pb-[calc(4rem_+_env(safe-area-inset-bottom))] sm:px-6 sm:pt-[calc(3rem_+_env(safe-area-inset-top))] sm:pb-[calc(5rem_+_env(safe-area-inset-bottom))]"
       onClick={onClose}
     >
       {/* 出るときだけ動かす。閉じるのは作業に戻る瞬間なので即消す（globals.css） */}

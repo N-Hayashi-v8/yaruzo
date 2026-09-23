@@ -418,7 +418,8 @@ export default function Home() {
 
   return (
     <>
-      <header className="flex h-[68px] flex-shrink-0 items-center gap-6 bg-foreground px-6 text-background">
+      {/* 高さは 68px + ノッチ/ステータスバーぶん。padding だけだと中身が潰れる（border-box） */}
+      <header className="flex h-[calc(68px_+_env(safe-area-inset-top))] flex-shrink-0 items-center gap-6 bg-foreground px-6 pt-[env(safe-area-inset-top)] text-background">
         {/* font-display は 30px 未満だと日本語の画数が潰れる（globals.css）。
             NOW は 26px で足りていたが、アプリ名にしたので下限まで上げる */}
         <span className="font-display text-[30px] tracking-[0.08em]">やるぞ！</span>
@@ -649,8 +650,10 @@ export default function Home() {
       </div>
 
       {/* キーが押せない環境（スマホ）でも同じ操作ができるよう、ヒントはそのままボタン。
-          常にアイコンで示し、キー表示は PC 幅（lg 以上）でだけ添える */}
-      <footer className="flex min-h-[54px] flex-shrink-0 items-center gap-1 overflow-x-auto bg-foreground px-3 font-mono text-[13px] font-bold tracking-[0.06em] text-background sm:gap-2 sm:px-5">
+          常にアイコンで示し、キー表示は PC 幅（lg 以上）でだけ添える。
+          下の余白は ホームインジケータのぶん。帯の黒は画面の下端まで伸ばしたまま、
+          札だけ インジケータの上へ逃がす（スワイプ領域と当たり判定が重なる） */}
+      <footer className="flex min-h-[calc(54px_+_env(safe-area-inset-bottom))] flex-shrink-0 items-center gap-1 overflow-x-auto bg-foreground px-3 pb-[env(safe-area-inset-bottom)] font-mono text-[13px] font-bold tracking-[0.06em] text-background sm:gap-2 sm:px-5">
         {hints.map((b) => (
           <HintButton key={b.keyLabel} {...b} />
         ))}
