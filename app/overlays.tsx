@@ -552,7 +552,7 @@ export function TodayOverlay({
               if (e.key === "Escape") onClose();
             }}
             aria-label="約束の内容"
-            className="min-w-[10rem] flex-1 border-4 border-foreground bg-background px-4 py-1.5 text-lg font-bold outline-none placeholder:text-current placeholder:opacity-35 sm:text-xl"
+            className="min-w-[10rem] flex-1 border-4 border-foreground bg-background px-2 py-1.5 text-lg font-bold outline-none placeholder:text-current placeholder:opacity-35 sm:text-xl"
           />
           <div className="flex gap-3">
             <button
