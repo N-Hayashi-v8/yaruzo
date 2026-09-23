@@ -162,7 +162,7 @@ r.onsuccess = () => r.result.transaction('store', 'readwrite').objectStore('stor
 
 - リモート: `origin` = <https://github.com/N-Hayashi-v8/yaruzo>（private）
 - 既定ブランチ: `main`
-- P1〜P5 + デスクトップアプリ化（Tauri）までコミット済み・push 済み
+- P1〜P6（デスクトップアプリ化・今日の約束 まで）コミット済み・push 済み
 
 Vercel への web 版デプロイは残している。`public/about/index.html` を `/about` で人に見せるため。
 `output: "export"` にしたので Vercel も静的サイトとして配信する。
