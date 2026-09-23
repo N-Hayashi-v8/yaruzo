@@ -666,8 +666,12 @@ export default function Home() {
       {/* キーが押せない環境（スマホ）でも同じ操作ができるよう、ヒントはそのままボタン。
           常にアイコンで示し、キー表示は PC 幅（lg 以上）でだけ添える。
           下の余白は ホームインジケータのぶん。帯の黒は画面の下端まで伸ばしたまま、
-          札だけ インジケータの上へ逃がす（スワイプ領域と当たり判定が重なる） */}
-      <footer className="flex min-h-[calc(54px_+_env(safe-area-inset-bottom))] flex-shrink-0 items-center gap-1 overflow-x-auto bg-foreground px-3 pb-[env(safe-area-inset-bottom)] font-mono text-[13px] font-bold tracking-[0.06em] text-background sm:gap-2 sm:px-5">
+          札だけ インジケータの上へ逃がす（スワイプ領域と当たり判定が重なる）。
+
+          揃えは safe center（justify-center-safe）。収まるときは中央、
+          はみ出したら左揃えに落ちる。ただの center だと はみ出したとき
+          左端の札が画面の外へ出て、スクロールしても戻れない */}
+      <footer className="flex min-h-[calc(54px_+_env(safe-area-inset-bottom))] flex-shrink-0 items-center justify-center-safe gap-1 overflow-x-auto bg-foreground px-3 pb-[env(safe-area-inset-bottom)] font-mono text-[13px] font-bold tracking-[0.06em] text-background sm:gap-2 sm:px-5">
         {hints.map((b) => (
           <HintButton key={b.keyLabel} {...b} />
         ))}
