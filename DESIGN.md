@@ -1,6 +1,6 @@
 # DESIGN.md
 
-原始人口調。設計図。実装前 必読。
+設計図。実装前 必読。
 
 ## 0. 一行
 
@@ -284,6 +284,7 @@ P6 まで実装済み。web 版（Vercel）も残す。`/about` を人に見せ�
 app/page.tsx        # NOW 画面（ヘッダ / 札 / タイマー / 右の柱 / 下端の操作札）
 app/overlays.tsx    # 追加 / 分解 / 眠い / 今日 の 4オーバーレイ + 目安バッジ
 app/globals.css     # token と 画面の切り替え（View Transitions / keyframes）
+app/layout.tsx      # html/body と フォント（next/font で 実体を同梱する）
 lib/types.ts        # 型定義
 lib/store.ts        # IndexedDB 読み書き 集約
 lib/select.ts       # 次タスク選択ロジック（古い順 / 眠気 / やめた分の除外）

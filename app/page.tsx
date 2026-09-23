@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import {
   addPlan,
   addPreset,
   completeTask,
+  hhmm,
   load,
   logFor,
   newTask,
@@ -34,6 +35,8 @@ import type { Quote, Store, Task } from "@/lib/types";
 import {
   AddOverlay,
   EstimateGrip,
+  Glyph,
+  PATHS,
   SleepyOverlay,
   SplitOverlay,
   TodayOverlay,
@@ -42,8 +45,6 @@ import {
 
 const mmss = (sec: number) =>
   `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
-
-const pad2 = (n: number) => String(n).padStart(2, "0");
 
 /** 約束までの残り。1 時間を超えたら分だけの数字は量として掴みにくいので時間を出す */
 const until = (min: number) => {
@@ -98,31 +99,30 @@ type DoneMotion = (typeof DONE_MOTIONS)[number];
 
 type OverlayName = "add" | "split" | "sleepy" | "today";
 
+/** 下端の操作札 1 つ分。d = アイコンの形（PATHS）、w = 線の太さ、off = 押せない */
+type Hint = {
+  d: string;
+  w?: number;
+  label: string;
+  keyLabel: string;
+  on: () => void;
+  off?: boolean;
+};
+
 /**
  * フッターのボタン。アイコン + ラベルは常に出す（タッチ操作が主）。
  * キー表示は PC 幅（lg 以上）でだけ添える
  */
-function HintButton({
-  icon,
-  keyLabel,
-  label,
-  onClick,
-  disabled = false,
-}: {
-  icon: ReactNode;
-  keyLabel: string;
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-}) {
+function HintButton({ d, w, label, keyLabel, on, off }: Hint) {
   return (
     <button
-      onClick={onClick}
-      disabled={disabled}
-      aria-keyshortcuts={keyLabel.toLowerCase()}
+      onClick={on}
+      disabled={off}
+      // aria-keyshortcuts の綴りは `Space` `Enter`（頭だけ大文字）。画面の表示は SPACE のまま
+      aria-keyshortcuts={keyLabel[0] + keyLabel.slice(1).toLowerCase()}
       className="flex min-h-11 items-center gap-1.5 px-2 whitespace-nowrap hover:bg-background hover:text-foreground active:bg-accent active:text-on-accent disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-current"
     >
-      {icon}
+      <Glyph d={d} width={w} />
       <span>{label}</span>
       <span className="hidden border-2 border-current px-1.5 py-0.5 text-[11px] lg:inline">
         {keyLabel}
@@ -219,8 +219,9 @@ export default function Home() {
     return () => clearTimeout(id);
   }, [cheer]);
 
-  // 以下のハンドラは useCallback で包まない。React Compiler が自動でメモ化する。
-  // 手で包むと「既存のメモ化を保持できない」と判定されてコンパイル自体が飛ぶ
+  // 以下のハンドラは useCallback で包まない。lint（react-hooks の compiler 由来のルール）が
+  // 「既存のメモ化を保持できない」で落ちる。子は誰もメモ化していないので、
+  // 毎 render 作り直しても実害は無い
   const toggle = () => {
     if (!taskId) return;
     if (startedAt === null) {
@@ -396,13 +397,24 @@ export default function Home() {
 
   // いまの時刻と、今日の約束。分が変わったときだけ計算し直る（minute が変わらないと再描画されない）
   const clock = new Date(minute * 60000);
-  const nowHm = `${pad2(clock.getHours())}:${pad2(clock.getMinutes())}`;
+  const nowHm = hhmm(clock);
   const plans = plansFor(store, today);
   const nextPlan = plans.find((p) => p.at > nowHm) ?? null;
   const minsToNext = nextPlan
     ? (Number(nextPlan.at.slice(0, 2)) - clock.getHours()) * 60 +
       (Number(nextPlan.at.slice(3, 5)) - clock.getMinutes())
     : 0;
+
+  const noCard = !stored || body !== null; // 身体タスク中と からっぽ では 送れない・割れない
+  const hints: Hint[] = [
+    { d: running ? PATHS.pause : PATHS.play, label: "開始/停止", keyLabel: "SPACE", on: toggle, off: !task },
+    { d: PATHS.check, w: 3.5, label: "完了", keyLabel: "ENTER", on: complete, off: !task },
+    { d: PATHS.plus, w: 3.5, label: "追加", keyLabel: "N", on: () => setOverlay("add") },
+    { d: PATHS.pass, label: "やめる", keyLabel: "P", on: pass, off: noCard },
+    { d: PATHS.split, label: "分解", keyLabel: "D", on: () => setOverlay("split"), off: noCard },
+    { d: PATHS.sleepy, w: 2.5, label: "眠い", keyLabel: "S", on: () => setOverlay("sleepy") },
+    { d: PATHS.today, w: 2.5, label: "今日", keyLabel: "T", on: () => openToday() },
+  ];
 
   return (
     <>
@@ -489,13 +501,7 @@ export default function Home() {
                   onClick={toggle}
                   className="flex min-h-14 items-center gap-3 border-4 border-current px-6 py-3 text-lg font-bold shadow-[8px_8px_0_currentColor]"
                 >
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" aria-hidden>
-                    {running ? (
-                      <path d="M6 4h4v16H6zM14 4h4v16h-4z" />
-                    ) : (
-                      <path d="M6 3l14 9-14 9z" />
-                    )}
-                  </svg>
+                  <Glyph d={running ? PATHS.pause : PATHS.play} size={22} />
                   {running ? "一時停止" : "開始"}
                   <span className="hidden border-2 border-current px-1.5 py-0.5 font-mono text-xs opacity-75 lg:inline">
                     SPACE
@@ -505,9 +511,7 @@ export default function Home() {
                   onClick={complete}
                   className="flex min-h-14 items-center gap-3 border-4 border-foreground bg-foreground px-6 py-3 text-lg font-bold text-background shadow-[8px_8px_0_var(--accent)]"
                 >
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <path d="M4 13l6 6L21 5" />
-                  </svg>
+                  <Glyph d={PATHS.check} size={22} width={3.5} />
                   完了
                   <span className="hidden border-2 border-current px-1.5 py-0.5 font-mono text-xs opacity-75 lg:inline">
                     ENTER
@@ -558,9 +562,7 @@ export default function Home() {
                 onClick={() => setOverlay("add")}
                 className="flex min-h-[68px] items-center gap-3.5 self-start border-[5px] border-foreground bg-accent px-7 py-3.5 text-2xl font-black text-on-accent shadow-[10px_10px_0_var(--color-foreground)] sm:text-3xl"
               >
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" aria-hidden>
-                  <path d="M12 5v14M5 12h14" />
-                </svg>
+                <Glyph d={PATHS.plus} size={28} width={3.5} />
                 追加する
                 <span className="hidden border-2 border-current px-2 py-1 font-mono text-[13px] lg:inline">
                   N
@@ -649,80 +651,9 @@ export default function Home() {
       {/* キーが押せない環境（スマホ）でも同じ操作ができるよう、ヒントはそのままボタン。
           常にアイコンで示し、キー表示は PC 幅（lg 以上）でだけ添える */}
       <footer className="flex min-h-[54px] flex-shrink-0 items-center gap-1 overflow-x-auto bg-foreground px-3 font-mono text-[13px] font-bold tracking-[0.06em] text-background sm:gap-2 sm:px-5">
-        <HintButton
-          icon={
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" aria-hidden>
-              {running ? <path d="M6 4h4v16H6zM14 4h4v16h-4z" /> : <path d="M6 3l14 9-14 9z" />}
-            </svg>
-          }
-          label="開始/停止"
-          keyLabel="SPACE"
-          onClick={toggle}
-          disabled={!task}
-        />
-        <HintButton
-          icon={
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M4 13l6 6L21 5" />
-            </svg>
-          }
-          label="完了"
-          keyLabel="ENTER"
-          onClick={complete}
-          disabled={!task}
-        />
-        <HintButton
-          icon={
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" aria-hidden>
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-          }
-          label="追加"
-          keyLabel="N"
-          onClick={() => setOverlay("add")}
-        />
-        <HintButton
-          icon={
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M5 6l6 6-6 6M13 6l6 6-6 6" />
-            </svg>
-          }
-          label="やめる"
-          keyLabel="P"
-          onClick={pass}
-          disabled={!stored || body !== null}
-        />
-        <HintButton
-          icon={
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M12 3v6M12 9L5 15v6M12 9l7 6v6" />
-            </svg>
-          }
-          label="分解"
-          keyLabel="D"
-          onClick={() => setOverlay("split")}
-          disabled={!stored || body !== null}
-        />
-        <HintButton
-          icon={
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-            </svg>
-          }
-          label="眠い"
-          keyLabel="S"
-          onClick={() => setOverlay("sleepy")}
-        />
-        <HintButton
-          icon={
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M4 5h16v15H4ZM8 3v4M16 3v4M4 10h16" />
-            </svg>
-          }
-          label="今日"
-          keyLabel="T"
-          onClick={() => openToday()}
-        />
+        {hints.map((b) => (
+          <HintButton key={b.keyLabel} {...b} />
+        ))}
       </footer>
 
       {overlay === "add" && (

@@ -134,10 +134,17 @@ export function presetsByRecent(store: Store): Preset[] {
   return [...store.presets].sort((a, b) => b.lastUsedAt - a.lastUsedAt);
 }
 
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
 /** ローカル日付の YYYY-MM-DD。UTC 変換を挟むと日付がずれるので getFullYear 系で組む */
 export function todayKey(d: Date = new Date()): string {
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+/** ローカル時刻の HH:mm。Plan の `at` と 同じ形（文字列比較で前後が出る） */
+export function hhmm(at: Date | number = new Date()): string {
+  const d = typeof at === "number" ? new Date(at) : at;
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
 /** その日の記録。無ければ空の記録を返す（作成はしない） */

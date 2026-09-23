@@ -13,11 +13,12 @@
   --color-foreground: var(--foreground);
   --color-accent: var(--accent);
   --color-on-accent: var(--on-accent);
-  --font-sans: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
-  --font-mono: "Azeret Mono", ui-monospace, monospace;
+  /* 実体は next/font がビルド時に同梱する（app/layout.tsx）。ここは名前を受けるだけ */
+  --font-sans: var(--font-zen), "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  --font-mono: var(--font-azeret), ui-monospace, monospace;
   /* ウェイト 400 のみの超極太ディスプレイ体。日本語は 30px 未満だと画数が潰れる。
      大見出し専用。ボタンや本文には使わない（font-black の Zen Kaku を使う） */
-  --font-display: "Dela Gothic One", "Hiragino Kaku Gothic ProN", sans-serif;
+  --font-display: var(--font-dela), "Hiragino Kaku Gothic ProN", sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {

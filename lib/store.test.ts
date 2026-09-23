@@ -4,6 +4,7 @@ import {
   addPlan,
   addPreset,
   completeTask,
+  hhmm,
   logFor,
   newTask,
   plansFor,
@@ -23,6 +24,12 @@ const empty: Store = { tasks: [], logs: [], presets: [], plans: [] };
 
 test("todayKey はローカル日付を YYYY-MM-DD で返す", () => {
   assert.equal(todayKey(new Date(2026, 0, 5, 23, 30)), "2026-01-05");
+});
+
+test("hhmm は Date でも epoch ms でも HH:mm を返す", () => {
+  const d = new Date(2026, 0, 5, 9, 7);
+  assert.equal(hhmm(d), "09:07");
+  assert.equal(hhmm(d.getTime()), "09:07");
 });
 
 test("記録が無ければ空の記録を返す（追加はしない）", () => {

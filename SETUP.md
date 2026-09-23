@@ -1,6 +1,6 @@
 # SETUP.md
 
-別 PC への引き継ぎ手順。原始人口調。
+別 PC への引き継ぎ手順。
 
 ## 1. 必要な環境
 
@@ -32,6 +32,9 @@
 - **WebView2** — Windows 11 はプリインストール済み。何もしなくていい。
   Windows 10 以前なら Tauri の生成するインストーラが面倒を見る
 - ブラウザ（開発時のみ。Chrome / Edge）
+- **ビルド時のネット接続** — `next/font` が Google Fonts の実体をビルド時に落として
+  `out/` に同梱する（`app/layout.tsx`）。落とした後は アプリ側がネットを使うことはない。
+  フォントだけで `out/` が 7MB 前後になる。これは想定どおり
 
 macOS / Linux でもビルドできる構成だが、確認していない。
 
@@ -179,6 +182,7 @@ Vercel への web 版デプロイは残している。`public/about/index.html` 
 1. `CLAUDE.md` — 前提と禁止事項。曲げるな
 2. `DESIGN.md` — 全画面仕様、フェーズ、作らないものリスト
 3. `lib/types.ts` — データ形状
-4. `app/page.tsx` — UI 全部（配色・フォントのトークンは `app/globals.css`）
+4. `app/page.tsx` — NOW 画面 / `app/overlays.tsx` — オーバーレイ 4 つ
+   （配色・フォントのトークンは `app/globals.css`）
 
 `AGENTS.md` は Next.js が自動生成・自動再追記するファイル。手で消しても `next dev` が戻す。

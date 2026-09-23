@@ -1,9 +1,44 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useId, useRef, useState, type ReactNode } from "react";
 
-import { clampMin } from "@/lib/store";
+import { clampMin, hhmm } from "@/lib/store";
 import type { Plan, Preset, Task } from "@/lib/types";
+
+/**
+ * アイコンの形。NOW と 下端 で同じ絵を使うので、d だけ 1 箇所に置く。
+ * 大きさと線の太さは 置く場所で変える
+ */
+export const PATHS = {
+  play: "M6 3l14 9-14 9z",
+  pause: "M6 4h4v16H6zM14 4h4v16h-4z",
+  check: "M4 13l6 6L21 5",
+  plus: "M12 5v14M5 12h14",
+  pass: "M5 6l6 6-6 6M13 6l6 6-6 6",
+  split: "M12 3v6M12 9L5 15v6M12 9l7 6v6",
+  sleepy: "M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z",
+  today: "M4 5h16v15H4ZM8 3v4M16 3v4M4 10h16",
+  close: "M6 6l12 12M18 6L6 18",
+  enter: "M4 12h14M13 6l6 6-6 6",
+} as const;
+
+export function Glyph({ d, size = 18, width = 3 }: { d: string; size?: number; width?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={width}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d={d} />
+    </svg>
+  );
+}
 
 /** 5 分の身体タスク。覚醒が落ちて刺激度の高いタスクが無いときに出す（DESIGN.md 3章） */
 export const BODY_TASKS = [
@@ -69,7 +104,21 @@ export function EstimateGrip({
   );
 }
 
-function Overlay({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+/**
+ * オーバーレイの外枠。見出しもここで出す（4 つとも同じ形なので各所で組まない）。
+ * `aria-modal` を立てるが、フォーカスは閉じ込めていない。ESC と × で閉じられるので
+ * 要るようになってから。閉じるのは window の keydown（app/page.tsx）が拾う
+ */
+function Overlay({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  const id = useId();
   return (
     <div
       className="anim-fade fixed inset-0 flex items-start justify-center overflow-y-auto bg-[rgba(22,19,15,0.74)] px-3 pt-8 pb-16 sm:px-6 sm:pt-12 sm:pb-20"
@@ -77,31 +126,29 @@ function Overlay({ onClose, children }: { onClose: () => void; children: ReactNo
     >
       {/* 出るときだけ動かす。閉じるのは作業に戻る瞬間なので即消す（globals.css） */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={id}
         onClick={(e) => e.stopPropagation()}
         className="anim-unfold flex w-full max-w-4xl flex-col gap-4 border-[6px] border-foreground bg-background p-4 shadow-[16px_16px_0_var(--accent)] sm:gap-5 sm:p-8"
       >
+        <div className="flex flex-wrap items-baseline gap-4">
+          <span id={id} className="font-display text-3xl sm:text-4xl">
+            {title}
+          </span>
+          <span className="flex-1" />
+          {/* 開いたキー（N/D/S/T）を出していたが、押せない札は閉じ方の案内にならない。
+              ESC を知らなくても閉じられるよう、右上は × のボタンにする */}
+          <button
+            onClick={onClose}
+            aria-label="閉じる"
+            className="flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center self-center border-[3px] border-current active:bg-accent active:text-on-accent"
+          >
+            <Glyph d={PATHS.close} size={20} width={3.5} />
+          </button>
+        </div>
         {children}
       </div>
-    </div>
-  );
-}
-
-function Head({ title, onClose }: { title: string; onClose: () => void }) {
-  return (
-    <div className="flex flex-wrap items-baseline gap-4">
-      <span className="font-display text-3xl sm:text-4xl">{title}</span>
-      <span className="flex-1" />
-      {/* 開いたキー（N/D/S/T）を出していたが、押せない札は閉じ方の案内にならない。
-          ESC を知らなくても閉じられるよう、右上は × のボタンにする */}
-      <button
-        onClick={onClose}
-        aria-label="閉じる"
-        className="flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center self-center border-[3px] border-current active:bg-accent active:text-on-accent"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" aria-hidden>
-          <path d="M6 6l12 12M18 6L6 18" />
-        </svg>
-      </button>
     </div>
   );
 }
@@ -130,9 +177,7 @@ export function AddOverlay({
   onMin: (min: number) => void;
 }) {
   return (
-    <Overlay onClose={onClose}>
-      <Head title="追加" onClose={onClose} />
-
+    <Overlay title="追加" onClose={onClose}>
       {/* 何度もやることは押すだけで生える。毎日おなじ文字を打つのは摩擦でしかない */}
       {presets.length > 0 && (
         <div className="flex flex-wrap items-center gap-2.5">
@@ -153,9 +198,7 @@ export function AddOverlay({
                 aria-label={`${p.title} を定番から外す`}
                 className="flex w-9 flex-shrink-0 items-center justify-center border-l-4 border-foreground opacity-45 active:bg-accent active:text-on-accent active:opacity-100"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" aria-hidden>
-                  <path d="M6 6l12 12M18 6L6 18" />
-                </svg>
+                <Glyph d={PATHS.close} size={14} width={4} />
               </button>
             </div>
           ))}
@@ -172,7 +215,6 @@ export function AddOverlay({
         onChange={(e) => onDraft(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.nativeEvent.isComposing) onAdd();
-          if (e.key === "Escape") onClose();
         }}
         className="w-full border-[5px] border-foreground bg-background px-4 py-3 text-xl font-bold outline-none placeholder:text-current placeholder:opacity-35 sm:px-5 sm:py-4 sm:text-4xl"
       />
@@ -181,9 +223,7 @@ export function AddOverlay({
           onClick={onAdd}
           className="flex min-h-14 items-center gap-3 border-4 border-foreground bg-accent px-6 py-3 text-lg font-bold text-on-accent shadow-[8px_8px_0_var(--color-foreground)]"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M4 12h14M13 6l6 6-6 6" />
-          </svg>
+          <Glyph d={PATHS.enter} size={22} width={3.5} />
           入れる
           <span className="hidden border-2 border-current px-1.5 py-0.5 font-mono text-xs lg:inline">
             ENTER
@@ -230,9 +270,7 @@ export function SplitOverlay({
 }) {
   const filled = steps.some((s) => s.trim() !== "");
   return (
-    <Overlay onClose={onClose}>
-      <Head title="分解" onClose={onClose} />
-
+    <Overlay title="分解" onClose={onClose}>
       <div className="flex flex-wrap items-center gap-4 border-4 border-foreground bg-foreground px-5 py-3.5 text-background">
         <span className="font-mono text-xs font-bold tracking-[0.12em] opacity-70">いま これ</span>
         <span className="font-display text-2xl sm:text-3xl">{title}</span>
@@ -254,7 +292,6 @@ export function SplitOverlay({
               onChange={(e) => onStep(i, e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.nativeEvent.isComposing) onSplit();
-                if (e.key === "Escape") onClose();
               }}
               className="w-full min-w-0 flex-1 bg-background px-4 py-3.5 text-lg font-bold outline-none placeholder:text-current placeholder:opacity-35 sm:text-xl"
             />
@@ -268,9 +305,7 @@ export function SplitOverlay({
           disabled={!filled}
           className="flex min-h-14 items-center gap-3 border-4 border-foreground bg-accent px-6 py-3 text-lg font-bold text-on-accent shadow-[8px_8px_0_var(--color-foreground)] disabled:opacity-40 disabled:shadow-none"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M12 3v6M12 9L5 15v6M12 9l7 6v6" />
-          </svg>
+          <Glyph d={PATHS.split} size={22} />
           割る
           <span className="hidden border-2 border-current px-1.5 py-0.5 font-mono text-xs lg:inline">
             ENTER
@@ -297,9 +332,7 @@ export function SleepyOverlay({
   onClose: () => void;
 }) {
   return (
-    <Overlay onClose={onClose}>
-      <Head title="眠い" onClose={onClose} />
-
+    <Overlay title="眠い" onClose={onClose}>
       {hasStim ? (
         <>
           <button
@@ -411,11 +444,6 @@ export function TodayOverlay({
   onRemovePlan: (id: string) => void;
   onClose: () => void;
 }) {
-  const hhmm = (ts: number) => {
-    const d = new Date(ts);
-    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-  };
-
   // 入れたら捨てる一時値なので、ここで持つ（閉じれば消えていい）。
   // 開いた時点で編集を指定されていれば、その中身を載せた状態から始める
   const opened = plans.find((p) => p.id === editPlanId) ?? null;
@@ -446,9 +474,7 @@ export function TodayOverlay({
   };
 
   return (
-    <Overlay onClose={onClose}>
-      <Head title="今日" onClose={onClose} />
-
+    <Overlay title="今日" onClose={onClose}>
       <div className="grid gap-6 sm:grid-cols-[1fr_18rem]">
         <div className="flex flex-col gap-2.5">
           <div className="flex items-end gap-3.5 border-b-[5px] border-foreground pb-1.5">
@@ -464,10 +490,8 @@ export function TodayOverlay({
                   key={t.id}
                   className="flex items-center gap-3 border-[3px] border-foreground px-3 py-2"
                 >
-                  <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center border-[3px] border-foreground bg-accent">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--on-accent)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                      <path d="M4 13l6 6L21 5" />
-                    </svg>
+                  <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center border-[3px] border-foreground bg-accent text-on-accent">
+                    <Glyph d={PATHS.check} size={16} width={4} />
                   </span>
                   <span className="flex-1 text-lg font-black">{t.title}</span>
                   <span className="font-mono text-sm font-bold opacity-65">
@@ -549,7 +573,6 @@ export function TodayOverlay({
             onChange={(e) => setWhat(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.nativeEvent.isComposing) put();
-              if (e.key === "Escape") onClose();
             }}
             aria-label="約束の内容"
             className="min-w-[10rem] flex-1 border-4 border-foreground bg-background px-2 py-1.5 text-lg font-bold outline-none placeholder:text-current placeholder:opacity-35 sm:text-xl"
@@ -602,9 +625,7 @@ export function TodayOverlay({
                   aria-label={`${p.at} ${p.title} を消す`}
                   className="flex w-8 flex-shrink-0 items-center justify-center border-l-[3px] border-current opacity-45 active:bg-foreground active:text-background active:opacity-100"
                 >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" aria-hidden>
-                    <path d="M6 6l12 12M18 6L6 18" />
-                  </svg>
+                  <Glyph d={PATHS.close} size={13} width={4} />
                 </button>
               </div>
             ))}
