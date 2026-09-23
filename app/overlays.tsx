@@ -482,7 +482,7 @@ export function TodayOverlay({
         <div className="flex flex-col gap-3.5">
           <div className="flex flex-col gap-2 border-[5px] border-foreground p-4 shadow-[8px_8px_0_var(--color-foreground)]">
             <span className="font-mono text-xs font-bold tracking-[0.12em]">起きた時刻</span>
-            <div className="flex w-full items-center justify-center border-4 border-foreground bg-background px-2 py-1.5">
+            <div className="flex w-full items-center border-4 border-foreground bg-background px-2 py-1.5">
               <input
                 type="time"
                 value={wakeAt}
