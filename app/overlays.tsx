@@ -482,12 +482,14 @@ export function TodayOverlay({
         <div className="flex flex-col gap-3.5">
           <div className="flex flex-col gap-2 border-[5px] border-foreground p-4 shadow-[8px_8px_0_var(--color-foreground)]">
             <span className="font-mono text-xs font-bold tracking-[0.12em]">起きた時刻</span>
-            <input
-              type="time"
-              value={wakeAt}
-              onChange={(e) => onWake(e.target.value)}
-              className="w-full border-4 border-foreground bg-background px-2 py-1.5 font-mono text-xl font-bold outline-none sm:text-2xl"
-            />
+            <div className="flex w-full items-center justify-center border-4 border-foreground bg-background px-2 py-1.5">
+              <input
+                type="time"
+                value={wakeAt}
+                onChange={(e) => onWake(e.target.value)}
+                className="bg-transparent font-mono text-xl font-bold outline-none sm:text-2xl"
+              />
+            </div>
             <span className="text-[13px] font-bold opacity-60">毎日おなじ時刻に寄せる</span>
           </div>
 
