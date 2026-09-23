@@ -158,6 +158,14 @@ export default function Home() {
   const [editPlanId, setEditPlanId] = useState<string | null>(null);
   /** からっぽ画面に出す言葉。からっぽに入るたび引き直す（下の shownTaskId のブロック） */
   const [restQuote, setRestQuote] = useState<Quote>(() => pickQuote(REST_QUOTES));
+  /**
+   * 次に出る札を 実行中で始めるときの開始時刻(ms)。null = 止まった状態で出す。
+   * 追加系が からっぽに 1枚目を入れたときだけ入る。
+   * 札が既に出ているなら NOW は変わらない = 開始する対象が無いので入れない。
+   * 真偽値でなく時刻を持つのは、render 中に Date.now() を呼べないから（lint: purity）。
+   * 押した瞬間を持つので、描画までの分がズレない
+   */
+  const [autoStart, setAutoStart] = useState<number | null>(null);
   const running = startedAt !== null;
 
   // 保存先は client でしか読めない。lazy init だと hydration が食い違うので mount 後に読む。
@@ -187,7 +195,10 @@ export default function Home() {
   if (shownTaskId !== taskId) {
     setShownTaskId(taskId);
     setElapsed(0);
-    setStartedAt(null);
+    // 入れた札が そのまま NOW になったときは 止まった状態から始めない。
+    // 入れる = やる気になった瞬間なので、そこで もう一度「開始」を押させるのは摩擦
+    setStartedAt(autoStart);
+    setAutoStart(null);
     if (taskId === null) setRestQuote(pickQuote(REST_QUOTES)); // からっぽに入った
   }
 
@@ -263,7 +274,11 @@ export default function Home() {
    * 追加系の後始末。からっぽに 1 枚目が入るときだけ札が貼り付く動きを出す。
    * 既に札が出ているときは追加しても NOW は変わらない = 動かすと同じ絵が揺れるだけ
    */
-  const addSwap = (fn: () => void) => (task ? fn() : swap("add", fn));
+  const addSwap = (fn: () => void) => {
+    if (task) return fn(); // 既に札が出ている。NOW は変わらないので 動かさないし 開始もしない
+    setAutoStart(Date.now()); // 入れた 1枚目が NOW になる。押した時刻から実行中で出す
+    swap("add", fn);
+  };
 
   /** 「今日」画面を開く。約束の id を渡すとその編集から始まる（右の柱を押したとき） */
   const openToday = (planId: string | null = null) => {
@@ -406,9 +421,8 @@ export default function Home() {
     : 0;
 
   const noCard = !stored || body !== null; // 身体タスク中と からっぽ では 送れない・割れない
+  // 開始/停止 と 完了 は置かない。NOW に大きいボタンが常に出ていて、そちらしか押さない
   const hints: Hint[] = [
-    { d: running ? PATHS.pause : PATHS.play, label: "開始/停止", keyLabel: "SPACE", on: toggle, off: !task },
-    { d: PATHS.check, w: 3.5, label: "完了", keyLabel: "ENTER", on: complete, off: !task },
     { d: PATHS.plus, w: 3.5, label: "追加", keyLabel: "N", on: () => setOverlay("add") },
     { d: PATHS.pass, label: "やめる", keyLabel: "P", on: pass, off: noCard },
     { d: PATHS.split, label: "分解", keyLabel: "D", on: () => setOverlay("split"), off: noCard },
