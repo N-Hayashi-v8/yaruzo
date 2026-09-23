@@ -486,7 +486,7 @@ export function TodayOverlay({
               type="time"
               value={wakeAt}
               onChange={(e) => onWake(e.target.value)}
-              className="w-full min-w-0 border-4 border-foreground bg-background px-2 py-1.5 font-mono text-xl leading-tight font-black outline-none sm:text-2xl"
+              className="w-full min-w-0 border-4 border-foreground bg-background px-2 py-1.5 font-mono text-xl font-black outline-none sm:text-2xl"
             />
             <span className="text-[13px] font-bold opacity-60">毎日おなじ時刻に寄せる</span>
           </div>
