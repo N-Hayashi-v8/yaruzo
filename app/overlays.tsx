@@ -532,7 +532,7 @@ export function TodayOverlay({
           {editing ? "約束を直す" : "今日の約束（動かせない予定だけ）"}
         </span>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <input
             type="time"
             value={at}
@@ -551,21 +551,23 @@ export function TodayOverlay({
             aria-label="約束の内容"
             className="min-w-[10rem] flex-1 border-4 border-foreground bg-background px-4 py-2 text-xl font-bold outline-none placeholder:text-current placeholder:opacity-35"
           />
-          <button
-            onClick={put}
-            disabled={at === "" || what.trim() === ""}
-            className="min-h-12 border-4 border-foreground bg-accent px-5 py-2 font-bold text-on-accent shadow-[6px_6px_0_var(--color-foreground)] disabled:opacity-35 disabled:shadow-none"
-          >
-            {editing ? "直す" : "入れる"}
-          </button>
-          {editing && (
+          <div className="flex gap-3">
             <button
-              onClick={clear}
-              className="min-h-12 border-[3px] border-current px-4 py-2 text-[15px] font-bold active:bg-accent active:text-on-accent"
+              onClick={put}
+              disabled={at === "" || what.trim() === ""}
+              className="min-h-12 border-4 border-foreground bg-accent px-5 py-2 font-bold text-on-accent shadow-[6px_6px_0_var(--color-foreground)] disabled:opacity-35 disabled:shadow-none"
             >
-              やめる
+              {editing ? "直す" : "入れる"}
             </button>
-          )}
+            {editing && (
+              <button
+                onClick={clear}
+                className="min-h-12 border-[3px] border-current px-4 py-2 text-[15px] font-bold active:bg-accent active:text-on-accent"
+              >
+                やめる
+              </button>
+            )}
+          </div>
         </div>
 
         {plans.length === 0 ? (
