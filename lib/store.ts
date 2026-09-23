@@ -27,14 +27,22 @@ function db(): Promise<IDBDatabase> {
 }
 
 function request<T>(mode: IDBTransactionMode, run: (t: IDBObjectStore) => IDBRequest<T>) {
-  return db().then(
-    (d) =>
-      new Promise<T>((resolve, reject) => {
-        const req = run(d.transaction(TABLE, mode).objectStore(TABLE));
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-      }),
-  );
+  return db()
+    .then(
+      (d) =>
+        new Promise<T>((resolve, reject) => {
+          const req = run(d.transaction(TABLE, mode).objectStore(TABLE));
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        }),
+    )
+    .catch((e) => {
+      // 開けなかった/閉じた接続を握り続けない。捨てれば次の呼び出しで開き直す。
+      // save() は失敗を握り潰すので、ここで捨てないと一度の失敗で
+      // そのセッションの保存が全部 黙って消える（localStorage は移行済みで空）
+      conn = null;
+      throw e;
+    });
 }
 
 /** 無い配列を空で埋める。定番を持たない頃のデータでも起動できるように */

@@ -326,7 +326,11 @@ export default function Home() {
   const split = () => {
     if (!taskId || body) return;
     if (steps.every((t) => t.trim() === "")) return;
-    update((s) => splitTask(s, taskId, steps));
+    const next = update((s) => splitTask(s, taskId, steps));
+    // 親は子ができた時点で候補から外れる。引き直さないと pickedTask が
+    // 先頭（= 一番古い別のタスク）を返して、いま割ったステップ 1 に入れない
+    const first = next?.tasks.find((t) => t.parentId === taskId);
+    if (first) setPickedId(first.id);
     setSteps(["", "", ""]);
     setOverlay(null);
   };
@@ -354,7 +358,9 @@ export default function Home() {
         setOverlay("add");
       } else if (e.key.toLowerCase() === "d") {
         e.preventDefault();
-        if (!body) setOverlay("split"); // 身体タスクは分解しない
+        // 身体タスクは分解しない。からっぽでも開かない
+        // （札が無いと中身が描かれず、キーだけ overlay に吸われて操作不能になる）
+        if (!body && stored) setOverlay("split");
       } else if (e.key.toLowerCase() === "s") {
         e.preventDefault();
         setOverlay("sleepy");
