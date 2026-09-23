@@ -533,13 +533,16 @@ export function TodayOverlay({
         </span>
 
         <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-          <input
-            type="time"
-            value={at}
-            onChange={(e) => setAt(e.target.value)}
-            aria-label="時刻"
-            className="flex-shrink-0 border-4 border-foreground bg-background px-2 py-1.5 font-mono text-lg leading-tight font-black outline-none sm:text-xl"
-          />
+          <div className="flex flex-shrink-0 flex-col gap-1">
+            <span className="text-[11px] font-bold opacity-40">時刻</span>
+            <input
+              type="time"
+              value={at}
+              onChange={(e) => setAt(e.target.value)}
+              aria-label="時刻"
+              className="border-4 border-foreground bg-background px-2 py-1.5 font-mono text-lg leading-tight font-black outline-none sm:text-xl"
+            />
+          </div>
           <input
             value={what}
             placeholder="通院・会議・締切"
