@@ -556,15 +556,21 @@ export function TodayOverlay({
           {editing ? "約束を直す" : "今日の約束（動かせない予定だけ）"}
         </span>
 
-        <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        {/*
+          時刻だけ ラベルを載せているので その列が 1 行ぶん高い。
+          中央で揃えると 内容 input と ボタンが そのぶん下へずれる。下端で揃える。
+          3 つとも min-h-12 にして、箱の高さ自体も合わせておく
+        */}
+        <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-end">
           <div className="flex flex-shrink-0 flex-col gap-1">
+            {/* time input は placeholder が効かない。何を入れる欄か 文字で出す */}
             <span className="text-[11px] font-bold opacity-40">時刻</span>
             <input
               type="time"
               value={at}
               onChange={(e) => setAt(e.target.value)}
               aria-label="時刻"
-              className="border-4 border-foreground bg-background px-2 py-1.5 font-mono text-lg leading-tight font-black outline-none sm:text-xl"
+              className="min-h-12 border-4 border-foreground bg-background px-2 py-1.5 font-mono text-lg leading-tight font-black outline-none sm:text-xl"
             />
           </div>
           <input
@@ -575,7 +581,7 @@ export function TodayOverlay({
               if (e.key === "Enter" && !e.nativeEvent.isComposing) put();
             }}
             aria-label="約束の内容"
-            className="min-w-[10rem] flex-1 border-4 border-foreground bg-background px-2 py-1.5 text-lg font-bold outline-none placeholder:text-current placeholder:opacity-35 sm:text-xl"
+            className="min-h-12 min-w-[10rem] flex-1 border-4 border-foreground bg-background px-2 py-1.5 text-lg leading-tight font-bold outline-none placeholder:text-current placeholder:opacity-35 sm:text-xl"
           />
           <div className="flex gap-3">
             <button
