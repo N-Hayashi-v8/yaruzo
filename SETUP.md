@@ -40,7 +40,7 @@ macOS / Linux でもビルドできる構成だが、確認していない。
 
 ## 2. セットアップ
 
-リポジトリ: <https://github.com/N-Hayashi-v8/yaruzo>（private）
+リポジトリ: <https://github.com/N-Hayashi-v8/yaruzo>（public）
 
 ```
 gh repo clone N-Hayashi-v8/yaruzo
@@ -163,7 +163,7 @@ r.onsuccess = () => r.result.transaction('store', 'readwrite').objectStore('stor
 
 ## 5. リポジトリの現状
 
-- リモート: `origin` = <https://github.com/N-Hayashi-v8/yaruzo>（private）
+- リモート: `origin` = <https://github.com/N-Hayashi-v8/yaruzo>（public）
 - 既定ブランチ: `main`
 - P1〜P6（デスクトップアプリ化・今日の約束 まで）コミット済み・push 済み
 

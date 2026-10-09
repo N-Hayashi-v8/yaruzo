@@ -1,0 +1,58 @@
+# v* のタグを push すると、Windows 用インストーラをビルドして GitHub Releases に載せる。
+# タグは src-tauri/tauri.conf.json の version と揃える（例: version 0.1.0 → タグ v0.1.0）。
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: タグと version が揃っているか
+        run: |
+          version=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "タグ $GITHUB_REF_NAME と tauri.conf.json の version $version が違う"
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run tauri build
+
+      # 生成物の名前は productName（やるぞ！）になる。日本語のファイル名は
+      # Releases の添付で崩れるので、ASCII の名前に付け替えてから載せる
+      - name: Releases に載せる
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          src=$(ls src-tauri/target/release/bundle/nsis/*-setup.exe)
+          dst="yaruzo_${VERSION}_x64-setup.exe"
+          cp "$src" "$dst"
+          gh release create "$GITHUB_REF_NAME" "$dst" \
+            --title "やるぞ！ $GITHUB_REF_NAME" \
+            --notes "Windows 用インストーラです。\`$dst\` をダウンロードして実行してください。
+
+          電子署名をしていないため、実行時に「Windows によって PC が保護されました」と表示されることがあります。その場合は「詳細情報」→「実行」を選んでください。"

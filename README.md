@@ -60,23 +60,12 @@ ADHD の脳は「重要だから」という理由では動き出しにくく、
 
 ### デスクトップアプリを入れる
 
-配布用のインストーラは今のところ用意していないため、ソースからビルドして作ります。
+1. [Releases](https://github.com/N-Hayashi-v8/yaruzo/releases/latest) を開き、`yaruzo_<バージョン>_x64-setup.exe` をダウンロードします。
+2. ダウンロードしたファイルを実行します。
+3. スタートメニューに「やるぞ！」が追加されます。次からはそこから起動できます。
 
-1. Node.js（v24 以降）、Rust、Microsoft C++ Build Tools を入れます。導入手順は [SETUP.md](SETUP.md) の1章にあります。
-2. このリポジトリを取得して、ビルドします。初回は Rust の依存関係をすべてコンパイルするため、数分かかります。
-
-   ```bash
-   npm install
-   npm run tauri build
-   ```
-
-3. `src-tauri/target/release/bundle/nsis/やるぞ！_0.1.0_x64-setup.exe` ができるので、実行します。
-4. スタートメニューに「やるぞ！」が追加されます。次からはそこから起動できます。
-
-インストーラには電子署名をしていません。ビルドしたインストーラをネット経由で別の PC に渡して実行すると、Windows SmartScreen の警告（「Windows によって PC が保護されました」）が出ることがあります。その場合は「詳細情報」から「実行」を選んでください。
+インストーラには電子署名をしていないため、実行時に「Windows によって PC が保護されました」という警告が出ることがあります。その場合は「詳細情報」→「実行」を選んでください。
 アンインストールは、Windows の「設定」→「アプリ」から行えます。
-
-macOS と Linux でもビルドできる構成にはなっていますが、動作は確認していません。
 
 ## データの保存先
 
@@ -93,7 +82,25 @@ npm install
 npm run dev     # http://localhost:3000 で開きます
 ```
 
-デスクトップアプリの窓で開発サーバーを確認するときは、`npm run tauri dev` を使います（[Tauri](https://tauri.app/) の開発モードです）。
+### デスクトップアプリ
+
+デスクトップアプリ化には [Tauri](https://tauri.app/) を使っています。手元でビルドするには、Rust と Microsoft C++ Build Tools も必要です（導入手順は [SETUP.md](SETUP.md) の1章にあります）。
+
+```bash
+npm run tauri dev     # アプリの窓で開発サーバーを開く
+npm run tauri build   # インストーラを作る（src-tauri/target/release/bundle/nsis/）
+```
+
+macOS と Linux でもビルドできる構成にはなっていますが、動作は確認していません。
+
+### リリース
+
+`src-tauri/tauri.conf.json` の `version` と同じ名前のタグ（例: `v0.1.0`）を push すると、GitHub Actions が Windows 用インストーラをビルドして Releases に載せます（[.github/workflows/release.yml](.github/workflows/release.yml)）。
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
 
 ### テストとチェック
 
