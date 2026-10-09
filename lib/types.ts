@@ -3,8 +3,6 @@ export type Task = {
   title: string;
   /** 目安の分数。カウントアップのバーが満ちる位置。超えても止まらない */
   estimateMin: number;
-  /** 刺激度。1=退屈 3=面白い。眠気モードの並べ替えキー（P3） */
-  stimulation: 1 | 2 | 3;
   /** 分解で生えた子タスクの親 ID */
   parentId: string | null;
   createdAt: number;
@@ -14,7 +12,7 @@ export type Task = {
 
 /**
  * 何度もやることの雛形。追加画面で 1 タップすると Task が生える。
- * 持つのはタイトルだけ。見積・刺激度を登録時に決めさせると入力項目が増える。
+ * 持つのはタイトルだけ。見積を登録時に決めさせると入力項目が増える。
  */
 export type Preset = {
   id: string;

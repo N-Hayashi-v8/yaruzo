@@ -91,7 +91,7 @@ export function save(store: Store): void {
 export const clampMin = (min: number) => Math.min(180, Math.max(5, Math.round(min / 5) * 5));
 
 /**
- * 追加時の入力は title だけ。刺激度は既定値（入力項目を増やさない）。
+ * 追加時の入力は title だけ（入力項目を増やさない）。
  * 目安分は既定 15 分。追加画面でドラッグして変えたときだけ渡ってくる。
  */
 export function newTask(title: string, estimateMin = 15): Task {
@@ -99,7 +99,6 @@ export function newTask(title: string, estimateMin = 15): Task {
     id: crypto.randomUUID(),
     title,
     estimateMin: clampMin(estimateMin),
-    stimulation: 2,
     parentId: null,
     createdAt: Date.now(),
     completedAt: null,
@@ -192,7 +191,7 @@ export function plansFor(store: Store, date: string): Plan[] {
 
 /**
  * タスクを 3 ステップに割る。子は parentId 付きで生えて、親は選択対象から外れる。
- * 見積は親の 1/3（最低 5 分）、刺激度は親を継ぐ。入力はタイトルだけ（入力項目を増やさない）。
+ * 見積は親の 1/3（最低 5 分）。入力はタイトルだけ（入力項目を増やさない）。
  */
 export function splitTask(store: Store, parentId: string, titles: string[]): Store {
   const parent = store.tasks.find((t) => t.id === parentId);
@@ -203,7 +202,6 @@ export function splitTask(store: Store, parentId: string, titles: string[]): Sto
     ...newTask(title),
     parentId,
     estimateMin: each,
-    stimulation: parent.stimulation,
   }));
   return { ...store, tasks: [...store.tasks, ...children] };
 }

@@ -55,7 +55,6 @@ test("別の日付は足される", () => {
 const task = (over: Partial<Task> & { id: string }): Task => ({
   title: over.id,
   estimateMin: 45,
-  stimulation: 2,
   parentId: null,
   createdAt: 10,
   completedAt: null,
@@ -71,11 +70,10 @@ test("splitTask は埋めた数だけ子を生やす", () => {
   assert.equal(out.tasks.length, 3);
 });
 
-test("splitTask の見積は最低 5 分、刺激度は親を継ぐ", () => {
-  const s: Store = { tasks: [task({ id: "p", estimateMin: 6, stimulation: 3 })], logs: [], presets: [], plans: [] };
+test("splitTask の見積は最低 5 分", () => {
+  const s: Store = { tasks: [task({ id: "p", estimateMin: 6 })], logs: [], presets: [], plans: [] };
   const c = splitTask(s, "p", ["a", "b", "c"]).tasks.filter((t) => t.parentId === "p");
   assert.deepEqual(c.map((t) => t.estimateMin), [5, 5, 5]);
-  assert.deepEqual(c.map((t) => t.stimulation), [3, 3, 3]);
 });
 
 test("splitTask は空入力や未知の親では何もしない", () => {

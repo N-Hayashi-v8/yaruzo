@@ -24,10 +24,8 @@ import {
 } from "@/lib/store";
 import {
   completedLeaves,
-  hasStimulating,
   nextTask,
   pickedTask,
-  taskQueue,
   withoutPassed,
 } from "@/lib/select";
 import { DONE_QUOTES, REST_QUOTES, pickQuote } from "@/lib/quotes";
@@ -140,9 +138,7 @@ export default function Home() {
   const [elapsed, setElapsed] = useState(0);
   /** 実行中の仮想開始時刻(ms)。null = 停止中。実時刻から引く（タブ非表示で setInterval が絞られてもズレない） */
   const [startedAt, setStartedAt] = useState<number | null>(null);
-  /** ponytail: 眠気モードはセッション限り。リロードで戻る。日をまたいで保つなら DayLog に足す */
-  const [sleepy, setSleepy] = useState(false);
-  /** いま出している 1 件。null = 引き直す（起動直後・完了直後・眠気切替） */
+  /** いま出している 1 件。null = 引き直す（起動直後・完了直後） */
   const [pickedId, setPickedId] = useState<string | null>(null);
   /** 身体タスクは永続化しない。覚醒を戻すためだけの一時タスク */
   const [body, setBody] = useState<BodyTask | null>(null);
@@ -185,7 +181,7 @@ export default function Home() {
 
   const live = (tasks: Task[]) => withoutPassed(tasks, passed);
 
-  const stored = store ? pickedTask(live(store.tasks), sleepy, pickedId) : null;
+  const stored = store ? pickedTask(live(store.tasks), pickedId) : null;
   const task = body ?? stored;
   const taskId = task?.id ?? null;
   const estimateMin = task?.estimateMin ?? 0;
@@ -266,7 +262,7 @@ export default function Home() {
         return;
       }
       const next = update((s) => completeTask(s, taskId));
-      if (next) setPickedId(nextTask(live(next.tasks), sleepy)?.id ?? null); // 済んだので次を引く
+      if (next) setPickedId(nextTask(live(next.tasks))?.id ?? null); // 済んだので次を引く
     });
   };
 
@@ -324,17 +320,14 @@ export default function Home() {
   const pass = () => {
     if (!store || body || !taskId) return;
     const next = new Set(passed).add(taskId);
-    const pick = nextTask(
-      store.tasks.filter((t) => !next.has(t.id)),
-      sleepy,
-    );
+    const pick = nextTask(store.tasks.filter((t) => !next.has(t.id)));
     swap("pass", () => {
       if (pick) {
         setPassed(next);
         setPickedId(pick.id);
       } else {
         setPassed(new Set());
-        setPickedId(nextTask(store.tasks, sleepy)?.id ?? null);
+        setPickedId(nextTask(store.tasks)?.id ?? null);
       }
     });
   };
@@ -438,11 +431,6 @@ export default function Home() {
             NOW は 26px で足りていたが、アプリ名にしたので下限まで上げる */}
         <span className="font-display text-[30px] tracking-[0.08em]">やるぞ！</span>
         <span className="h-5 flex-1 bg-[repeating-linear-gradient(135deg,currentColor_0_6px,transparent_6px_14px)] opacity-55" />
-        {sleepy && (
-          <span className="border-2 border-current px-2 py-0.5 font-mono text-xs font-bold tracking-[0.1em]">
-            眠気モード
-          </span>
-        )}
         {/* 完了した札はここへ飛んでくる（globals.css の crumple/toss/flip）。
             受け取った側が跳ねないと、どこへ行ったのか分からない。
             key を数字にしてあるので、増えたときだけ animation が焼き直される */}
@@ -459,8 +447,6 @@ export default function Home() {
           {task ? (
             <>
               <div className="flex flex-wrap items-center gap-2.5">
-                {/* 刺激度は出さない。入力手段が無くて全部おなじ値になるので、
-                    出しても情報が無い。眠気モードの並べ替えには裏で使う */}
                 {body && (
                   <span className="border-[3px] border-current bg-accent px-3 py-1 text-sm font-bold tracking-[0.08em] text-on-accent">
                     身体タスク
@@ -704,13 +690,6 @@ export default function Home() {
 
       {overlay === "sleepy" && (
         <SleepyOverlay
-          sleepy={sleepy}
-          onToggle={() => {
-            setSleepy((v) => !v);
-            setPickedId(null); // 並べ替えの基準が変わるので引き直す
-          }}
-          hasStim={hasStimulating(store.tasks)}
-          queue={taskQueue(store.tasks, sleepy).slice(0, 3)}
           onPickBody={(b) => {
             setBody(b);
             setOverlay(null);

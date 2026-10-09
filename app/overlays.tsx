@@ -40,7 +40,7 @@ export function Glyph({ d, size = 18, width = 3 }: { d: string; size?: number; w
   );
 }
 
-/** 5 分の身体タスク。覚醒が落ちて刺激度の高いタスクが無いときに出す（DESIGN.md 3章） */
+/** 5 分の身体タスク。眠い = 退屈で覚醒が落ちている。体を動かして戻す（DESIGN.md 3章 眠い） */
 export const BODY_TASKS = [
   { id: "body:walk", title: "歩く", estimateMin: 5 },
   { id: "body:water", title: "水 飲む", estimateMin: 5 },
@@ -319,96 +319,40 @@ export function SplitOverlay({
 }
 
 export function SleepyOverlay({
-  sleepy,
-  onToggle,
-  hasStim,
-  queue,
   onPickBody,
   onClose,
 }: {
-  sleepy: boolean;
-  onToggle: () => void;
-  hasStim: boolean;
-  queue: Task[];
   onPickBody: (t: BodyTask) => void;
   onClose: () => void;
 }) {
   return (
     <Overlay title="眠い" onClose={onClose}>
-      {hasStim ? (
-        <>
+      <p className="font-display text-2xl leading-tight sm:text-4xl">
+        眠いのは 退屈だから。
+        <br />
+        体を 動かす。
+      </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+        {BODY_TASKS.map((b, i) => (
           <button
-            onClick={onToggle}
-            className="flex items-stretch border-[5px] border-foreground text-left shadow-[10px_10px_0_var(--color-foreground)]"
+            key={b.id}
+            onClick={() => onPickBody(b)}
+            className={`flex flex-1 items-center gap-3 border-[5px] border-foreground px-4 py-3 shadow-[8px_8px_0_var(--color-foreground)] sm:min-h-[120px] sm:flex-col sm:items-start sm:gap-2.5 sm:px-5 sm:py-5 ${
+              i === 0 ? "bg-accent text-on-accent" : ""
+            }`}
           >
-            <span
-              className={`flex w-32 flex-shrink-0 items-center justify-center border-r-[5px] border-foreground text-3xl font-black sm:w-40 ${
-                sleepy ? "bg-accent text-on-accent" : ""
-              }`}
-            >
-              {sleepy ? "ON" : "OFF"}
-            </span>
-            <span className="flex flex-1 items-center px-5 py-4">
-              <span className="text-xl font-black sm:text-2xl">面白い順に 並べ替える</span>
-            </span>
+            <svg className="h-7 w-7 flex-shrink-0 sm:h-[34px] sm:w-[34px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              {b.id === "body:walk" && (
+                <path d="M13 4.5a1 1 0 100-.1M11 21l2-6-3-3 1-5 4 3 3 1M10 12l-3 2-2 5" />
+              )}
+              {b.id === "body:water" && <path d="M6 4h12l-1.5 16h-9zM7 10h10" />}
+              {b.id === "body:face" && <path d="M4 13a8 8 0 0116 0M8 17h8M12 3v3" />}
+            </svg>
+            <span className="text-lg font-black sm:text-2xl">{b.title}</span>
+            <span className="font-mono text-sm font-bold sm:text-[17px]">{b.estimateMin}分</span>
           </button>
-
-          <div className="flex flex-col gap-3">
-            <span className="font-mono text-xs font-bold tracking-[0.12em]">
-              {sleepy ? "面白い順" : "通常 = 古い順"}
-            </span>
-            {queue.map((t, i) => (
-              <div
-                key={t.id}
-                className={`flex items-stretch border-4 border-foreground shadow-[7px_7px_0_var(--color-foreground)] ${
-                  i === 0 ? "bg-accent text-on-accent" : ""
-                }`}
-              >
-                {/* 刺激度は入力手段が無くて全部おなじ値になるので、出す意味がない。
-                    ここは何番目に出るかを見せる */}
-                <span className="flex w-16 flex-shrink-0 items-center justify-center border-r-4 border-current font-display text-2xl">
-                  {i + 1}
-                </span>
-                <span className="flex flex-1 items-center px-5 py-3.5 text-xl font-black">
-                  {t.title}
-                </span>
-                <span className="flex items-center px-5 font-mono text-lg font-bold">
-                  {t.estimateMin}分
-                </span>
-              </div>
-            ))}
-          </div>
-        </>
-      ) : (
-        <>
-          <p className="font-display text-2xl leading-tight sm:text-4xl">
-            面白いタスク なし。
-            <br />
-            体を 動かす。
-          </p>
-          <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
-            {BODY_TASKS.map((b, i) => (
-              <button
-                key={b.id}
-                onClick={() => onPickBody(b)}
-                className={`flex flex-1 items-center gap-3 border-[5px] border-foreground px-4 py-3 shadow-[8px_8px_0_var(--color-foreground)] sm:min-h-[120px] sm:flex-col sm:items-start sm:gap-2.5 sm:px-5 sm:py-5 ${
-                  i === 0 ? "bg-accent text-on-accent" : ""
-                }`}
-              >
-                <svg className="h-7 w-7 flex-shrink-0 sm:h-[34px] sm:w-[34px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  {b.id === "body:walk" && (
-                    <path d="M13 4.5a1 1 0 100-.1M11 21l2-6-3-3 1-5 4 3 3 1M10 12l-3 2-2 5" />
-                  )}
-                  {b.id === "body:water" && <path d="M6 4h12l-1.5 16h-9zM7 10h10" />}
-                  {b.id === "body:face" && <path d="M4 13a8 8 0 0116 0M8 17h8M12 3v3" />}
-                </svg>
-                <span className="text-lg font-black sm:text-2xl">{b.title}</span>
-                <span className="font-mono text-sm font-bold sm:text-[17px]">{b.estimateMin}分</span>
-              </button>
-            ))}
-          </div>
-        </>
-      )}
+        ))}
+      </div>
     </Overlay>
   );
 }
